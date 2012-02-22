@@ -169,7 +169,15 @@ var padeditbar = (function()
               {
                 ace.ace_setAttributeOnSelection('author', '');
               }
-            }
+            } else
+	    if (cmd == 'addAttribute')
+            {
+		attribute = window.prompt("What attribute should I set?");
+		val = window.prompt("What value should I set?");
+
+                ace.ace_setAttributeOnSelection(attribute, val);
+            } 
+
           }, cmd, true);
         }
       }

@@ -1262,3 +1262,19 @@ label {
  background: #eee !important;
  background: linear-gradient(#EEE, #F0F0F0) !important;
 }
+
+.suggestion {
+    background: url(../../static/img/underline.gif) bottom repeat-x;
+}
+
+.formula {
+    color: green;
+}
+
+.cmd {
+    color: blue;
+}
+
+.par {
+    color: green;
+}

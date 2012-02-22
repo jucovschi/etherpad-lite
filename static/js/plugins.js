@@ -1,22 +1,40 @@
-/**
- * This code is mostly from the old Etherpad. Please help us to comment this code. 
- * This helps other people to understand this code better and helps them to improve it.
- * TL;DR COMMENTS ON THIS FILE ARE HIGHLY APPRECIATED
- */
-
 var plugins = {
+  clientHooks: {},
+
+  addClientHook: function(hookName, plugin)
+  {
+	if( typeof(this.clientHooks[hookName]) == "undefined" ) { this.clientHooks[hookName] = []; }
+	this.clientHooks[hookName].push( {"plugin": plugin} );
+  },
+  
   callHook: function(hookName, args)
   {
-    var global = (function () {return this}());
-    var hook = ((global.clientVars || {}).hooks || {})[hookName];
-    if (hook === undefined) return [];
-    var res = [];
-    for (var i = 0, N = hook.length; i < N; i++)
-    {
-      var plugin = hook[i];
-      var pluginRes = eval(plugin.plugin)[plugin.original || hookName](args);
-      if (pluginRes != undefined && pluginRes != null) res = res.concat(pluginRes);
-    }
+    var hook = clientVars.hooks[hookName];
+	var clienthook = this.clientHooks[hookName];
+	
+    if (hook === undefined && clienthook == undefined) return [];
+    
+	var res = [];
+	
+	if(hook != undefined)
+	{
+		for (var i = 0, N = hook.length; i < N; i++)
+		{
+		  var plugin = hook[i];
+		  var pluginRes = eval(plugin.plugin)[plugin.original || hookName](args);
+		  if (pluginRes != undefined && pluginRes != null) res = res.concat(pluginRes);
+		}
+	}
+	if(clienthook != undefined)
+	{
+		for (var i = 0, N = clienthook.length; i < N; i++)
+		{
+		  var plugin = clienthook[i];
+		  var pluginRes = eval(plugin.plugin)[plugin.original || hookName](args);
+		  if (pluginRes != undefined && pluginRes != null) res = res.concat(pluginRes);
+		}
+	}
+	
     return res;
   },
 
@@ -25,12 +43,10 @@ var plugins = {
     if (sep == undefined) sep = '';
     if (pre == undefined) pre = '';
     if (post == undefined) post = '';
-    var newCallhooks = [];
-    var callhooks = plugins.callHook(hookName, args);
-    for (var i = 0, ii = callhooks.length; i < ii; i++) {
-      newCallhooks[i] = pre + callhooks[i] + post;
-    }
-    return newCallhooks.join(sep || "");
+    return plugins.callHook(hookName, args).map(function(x)
+    {
+      return pre + x + post
+    }).join(sep || "");
   }
 };
 

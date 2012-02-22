@@ -35,6 +35,7 @@ var formidable = require('formidable');
 var apiHandler;
 var exportHandler;
 var importHandler;
+var botHandler;
 var exporthtml;
 var readOnlyManager;
 var padManager;
@@ -116,6 +117,7 @@ async.waterfall([
     exporthtml = require("./utils/ExportHtml");
     exportHandler = require('./handler/ExportHandler');
     importHandler = require('./handler/ImportHandler');
+    botHandler = require('./handler/BotHandler');
     apiHandler = require('./handler/APIHandler');
     padManager = require('./db/PadManager');
     securityManager = require('./db/SecurityManager');
@@ -311,6 +313,13 @@ async.waterfall([
       });
     });
     
+    app.get('/p/:pad/bot', function(req, res, next) {
+      hasPadAccess(req, res, function()
+      {
+        botHandler.getBots(req, res, req.params.pad);
+      });
+    });
+    
     var apiLogger = log4js.getLogger("API");
 
     //This is for making an api call, collecting all post information and passing it to the apiHandler
@@ -456,6 +465,7 @@ async.waterfall([
     //this is only a workaround to ensure it works with all browers behind a proxy
     //we should remove this when the new socket.io version is more stable
     io.set('transports', ['xhr-polling']);
+//    io.set('transports', ['websocket']);
     
     var socketIOLogger = log4js.getLogger("socket.io");
     io.set('logger', {

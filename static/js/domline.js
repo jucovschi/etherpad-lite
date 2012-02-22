@@ -38,6 +38,22 @@ domline.identity = function(x)
   return x;
 };
 
+window.clickedon = function(me, e) {
+    var rightclick;
+    if (!e) var e = window.event;
+    if (e.which) rightclick = (e.which == 3);
+    else if (e.button) rightclick = (e.button == 2);
+    if (rightclick) {
+	choice = new RegExp("choice");
+	match = choice.exec(me.className);
+	if (match) {
+	    plugins.callHook("clickedOnChoice", me);
+	    return false;
+	}
+    }
+    return true;
+}
+
 domline.addToLineClass = function(lineClass, cls)
 {
   // an "empty span" at any point can be used to add classes to
@@ -179,7 +195,7 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
         simpleTags.reverse();
         extraCloseTags = '</' + simpleTags.join('></') + '>' + extraCloseTags;
       }
-      html.push('<span class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
+      html.push('<span onMouseDown="return window.clickedon(this);" onContextMenu="return window.clickedon(this);" class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
     }
   };
   result.clearSpans = function()
