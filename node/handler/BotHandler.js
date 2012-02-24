@@ -26,12 +26,15 @@ var fs = require("fs");
 var settings = require('../utils/Settings');
 var formidable = require('formidable');
 var os = require("os");
+var highlighter = require("../../static/plugins/codemirror/stexadaptor.js");
 
 //load abiword only if its enabled
 if(settings.abiword != null)
   var abiword = require("../utils/Abiword");
 
 var tempDirectory = "/tmp/";
+var highlighter = highlighter.highlighter("stex");
+  var firstTime = true;
 
 //tempDirectory changes if the operating system is windows
 if(os.type().indexOf("Windows") > -1)
@@ -76,10 +79,13 @@ exports.getBots = function(req, res, padId)
 
       function(callback)
       {
-	  var apool = pad.apool();
-	  var pid = apool.putAttrib(["cmd","true"]);
-	  
-	  callback();
+	  if (firstTime) {
+	      cs = highlighter.highlight(pad.atext, pad.pool);
+	      pad.appendRevision(cs);
+	      padMessageHandler.updatePadClients(pad, callback);
+	  } else {
+	      callback();
+	  }
       }
 
 /*    

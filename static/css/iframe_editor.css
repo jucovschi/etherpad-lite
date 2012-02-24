@@ -201,3 +201,13 @@ p {
 .syntax .flashbad { background-color: #f55 !important; }
 
 
+.stex-unit { color: #281; }
+.stex-identifier { color: black; }
+.stex-slash { color: #FAA; }
+.stex-command { color: #00F; }
+.stex-comment { color: #A70; }
+.stex-import { color: #00F; }
+.stex-filepath { color: #852626; }
+.stex-module { color: #852626; }
+.stex-error { text-decoration: underline; color: red; }
+.stex-string { color: #A22; }

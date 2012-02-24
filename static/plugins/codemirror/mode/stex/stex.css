@@ -1,20 +1,20 @@
-span.css-at {color: #708;}
-span.css-unit {color: #281;}
-span.css-value {color: #708;}
-span.css-identifier {color: black;}
-span.css-selector {color: #11B;}
-span.css-important {color: #00F;}
-span.css-colorcode {color: #299;}
-span.css-comment {color: #A70;}
-span.css-string {color: #A22;}
+.css-at {color: #708;}
+.css-unit {color: #281;}
+.css-value {color: #708;}
+.css-identifier {color: black;}
+.css-selector {color: #11B;}
+.css-important {color: #00F;}
+.css-colorcode {color: #299;}
+.css-comment {color: #A70;}
+.css-string {color: #A22;}
 
-span.stex-unit { color: #281; }
-span.stex-identifier { color: black; }
-span.stex-slash { color: #FAA; }
-span.stex-command { color: #00F; }
-span.stex-comment { color: #A70; }
-span.stex-import { color: #00F; }
-span.stex-filepath { color: #852626; }
-span.stex-module { color: #852626; }
-span.stex-error { text-decoration: underline; color: red; }
-span.stex-string { color: #A22; }
+.stex-unit { color: #281; }
+.stex-identifier { color: black; }
+.stex-slash { color: #FAA; }
+.stex-command { color: #00F; }
+.stex-comment { color: #A70; }
+.stex-import { color: #00F; }
+.stex-filepath { color: #852626; }
+.stex-module { color: #852626; }
+.stex-error { text-decoration: underline; color: red; }
+.stex-string { color: #A22; }
