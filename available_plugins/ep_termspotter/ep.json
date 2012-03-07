@@ -6,6 +6,12 @@
       "post" : [],
       "hooks": {
 	"srvGenChangeset": "ep_termspotter/termspotter:onNewChanges"
+      },
+      "client_hooks": {
+	"aceAttribsToClasses": "ep_codemirror/static/codemirror:onAceAttribsToClasses",
+	"aceAddCSS": "ep_termspotter/static/termspotter:onAddCSS",
+	"aceAddJS": "ep_termspotter/static/termspotter:onAddJS",
+	"aceCreateDomLine": "ep_termspotter/static/termspotter:onCreateDomLine"
       }
     }
   ]

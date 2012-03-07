@@ -1,5 +1,3 @@
-
-
 var autolinker = require("./autolinker.js");
 var autolinker = autolinker.autolinker();
 var padMessageHandler = require("ep_etherpad-lite/node/handler/PadMessageHandler");
@@ -17,3 +15,4 @@ exports.onNewChanges = function(hook_name, args, cb) {
 exports.attribsToClasses = function(hook_name, args, cb) {
     console.log(cb);
 }
+

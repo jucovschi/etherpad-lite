@@ -254,16 +254,14 @@ function Ace2Editor()
       $$INCLUDE_CSS("../static/css/iframe_editor.css");
       $$INCLUDE_CSS("../static/css/pad.css");
       $$INCLUDE_CSS("../static/custom/pad.css");
-      var moreCSS = hooks.callAll("aceAddCSS", {
-        fnc: $$INCLUDE_CSS
-      });
-      console.log(moreCSS);
+      var moreCSS = hooks.callAll("aceAddCSS", {});
       for (var i = 0; i < moreCSS.length; i++)
         $$INCLUDE_CSS(moreCSS[i]);
       pushStyleTagsFor(iframeHTML, includedCSS);
 
       var includedJS = [];
       var $$INCLUDE_JS = function(filename) {includedJS.push(filename)};
+
       pushRequireScriptTo(iframeHTML);
       // Inject my plugins into my child.
       iframeHTML.push('\
@@ -280,6 +278,13 @@ function Ace2Editor()
 
       iframeHTML.push('<style type="text/css" title="dynamicsyntax"></style>');
       iframeHTML.push('</head><body id="innerdocbody" class="syntax" spellcheck="false">&nbsp;</body></html>');
+
+
+      var moreJS = hooks.callAll("aceAddJS", {});
+      for (var i = 0; i < moreJS.length; i++) {
+	  iframeHTML.push('<script type="text/javascript" src="'+moreJS[i]+'"></script>');
+      }
+
 
       // Expose myself to global for my child frame.
       var thisFunctionsName = "ChildAccessibleAce2Editor";
