@@ -1,0 +1,13 @@
+{
+  "parts": [
+    {
+      "name": "easyreader",
+      "pre" : [],
+      "post" : [],
+      "hooks": {
+	"onNewChanges": "pluginomatic_easyreader/easyreader:onNewChanges",
+	"aceAttribsToClasses": "pluginomatic_easyreader/easyreader:attribsToClasses"
+      }
+    }
+  ]
+}

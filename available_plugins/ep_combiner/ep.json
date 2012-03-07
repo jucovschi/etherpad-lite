@@ -1,0 +1,12 @@
+{
+  "parts": [
+    {
+      "name": "termspotter",
+      "pre": ["ep_fintest/somepart"],
+      "post" : [],
+      "hooks": {
+	"msg_USER_CHANGES": "ep_combiner/combiner:onNewChanges"
+      }
+    }
+  ]
+}

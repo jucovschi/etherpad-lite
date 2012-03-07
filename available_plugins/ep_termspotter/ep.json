@@ -1,0 +1,12 @@
+{
+  "parts": [
+    {
+      "name": "termspotter",
+      "pre": ["ep_fintest/somepart"],
+      "post" : [],
+      "hooks": {
+	"srvGenChangeset": "ep_termspotter/termspotter:onNewChanges"
+      }
+    }
+  ]
+}
