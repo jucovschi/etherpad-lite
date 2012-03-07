@@ -8,6 +8,21 @@ var fs = require("fs");
 var ERR = require("async-stacktrace");
 
 exports.expressCreateServer = function (hook_name, args, cb) {
+  args.app.get(/^\/plugins\/([^\/]+)\/static\/(.*)/, function(req, res, next) {
+    var plugin_name = req.params[0];
+    var path = req.params[1];
+    var modulePath = req.url.split("?")[0].substr("plugins/".length);
+    if (plugins.plugins[plugin_name] == undefined) {
+      return next();
+    }
+    var fullPath = plugins.plugins[plugin_name].package.realPath+"/static/"+path;
+    fs.readFile(fullPath, "utf8", function(err, data){
+      res.header("Content-Type","text/css");
+      res.write(data);
+      res.end();
+    });
+  });
+  
   /* Handle static files for plugins:
      paths like "/static/plugins/ep_myplugin/js/test.js"
      are rewritten into ROOT_PATH_OF_MYPLUGIN/static/js/test.js,
@@ -27,10 +42,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       
       res.send("require.define('" + modulePath + "', function (require, exports, module) {" + data + "})");
     })
-
-//require.define("/plugins.js", function (require, exports, module) {
-
-    //res.sendfile(fullPath);
   });
 
   // Cache both minified and static.

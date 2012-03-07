@@ -49,6 +49,11 @@ var linestylefilter = require('ep_etherpad-lite/static/js/linestylefilter').line
 var newSkipList = require('ep_etherpad-lite/static/js/skiplist').newSkipList;
 var undoModule = require('ep_etherpad-lite/static/js/undomodule').undoModule;
 var makeVirtualLineView = require('ep_etherpad-lite/static/js/virtual_lines').makeVirtualLineView;
+var plugin = require("ep_etherpad-lite/static/js/pluginfw/plugins");
+var jquery = require("ep_etherpad-lite/static/js/jquery");
+
+plugin.ensure(function() {
+});
 
 
 function Ace2Inner(){

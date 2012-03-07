@@ -31,6 +31,7 @@ var securityManager = require("../db/SecurityManager");
 var plugins = require("ep_etherpad-lite/static/js/pluginfw/plugins.js");
 var log4js = require('log4js');
 var messageLogger = log4js.getLogger("message");
+var hooks = require("ep_etherpad-lite/static/js/pluginfw/hooks");
 
 /**
  * A associative array that translates a session to a pad
@@ -465,6 +466,11 @@ function handleUserChanges(client, message)
       }
         
       exports.updatePadClients(pad, callback);
+    },
+    //send message to plugins
+    function (callback)
+    {
+      hooks.callAll("msg_USER_CHANGES", {"pad":pad});
     }
   ], function(err)
   {

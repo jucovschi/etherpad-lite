@@ -254,6 +254,12 @@ function Ace2Editor()
       $$INCLUDE_CSS("../static/css/iframe_editor.css");
       $$INCLUDE_CSS("../static/css/pad.css");
       $$INCLUDE_CSS("../static/custom/pad.css");
+      var moreCSS = hooks.callAll("aceAddCSS", {
+        fnc: $$INCLUDE_CSS
+      });
+      console.log(moreCSS);
+      for (var i = 0; i < moreCSS.length; i++)
+        $$INCLUDE_CSS(moreCSS[i]);
       pushStyleTagsFor(iframeHTML, includedCSS);
 
       var includedJS = [];
