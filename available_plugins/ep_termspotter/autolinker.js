@@ -31,7 +31,7 @@ exports.autolinker = function() {
 	
 	for (i=0; i<found.length; ++i) {
 	    found[i].text.sort();
-	    wid = found[i].text.map(function(w) { return "word-"+w; }).join(" ");
+	    wid = found[i].text.join(".");
 	    events.push(new event("begin", found[i].start, wid));
 	    events.push(new event("end", found[i].finish+1, wid));
 	}
@@ -46,8 +46,8 @@ exports.autolinker = function() {
 
 	for (var i=0; i<events.length; ++i) {
 	    if (events[i].pos > last) {
-		att = attr.join(" ");
-		builder.keep(events[i].pos-last, 0, [["autolinker",att]], apool);
+		att = attr.join(".");
+		builder.keep(events[i].pos-last, 0, [["choice:termspotter", att]], apool);
 		last = events[i].pos;
 	    } 
 
@@ -59,7 +59,7 @@ exports.autolinker = function() {
 	    }
 	    if (events[i].type == "new_line") {
 		att = attr.join("");
-		builder.keep(1, 1, [["autolinker",att]], apool);
+		builder.keep(1, 1, [["choice:termspotter",att]], apool);
 		last = events[i].pos+1;
 	    }
 	}

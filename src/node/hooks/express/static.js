@@ -17,6 +17,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
     var fullPath = plugins.plugins[plugin_name].package.realPath+"/static/"+path;
     fs.readFile(fullPath, "utf8", function(err, data){
+      if(ERR(err)) return;
       res.header("Content-Type","text/css");
       res.write(data);
       res.end();

@@ -8,7 +8,6 @@
 	"srvGenChangeset": "ep_codemirror/codemirror:onNewChanges"
       },
       "client_hooks": {
-	"aceAttribsToClasses": "ep_codemirror/static/codemirror:onAceAttribsToClasses",
 	"aceAddCSS": "ep_codemirror/static/codemirror:onAddCSS"
       }
     }

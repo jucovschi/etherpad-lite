@@ -32,8 +32,22 @@ var Ace2Common = require('ep_etherpad-lite/static/js/ace2_common');
 var map = Ace2Common.map;
 var noop = Ace2Common.noop;
 var identity = Ace2Common.identity;
+var plugins = require('ep_etherpad-lite/static/js/pluginfw/plugins');
 
 var domline = {};
+
+window.clickedon = function(me, e) {
+    var rightclick;
+    if (!e) var e = window.event;
+    if (e.which) rightclick = (e.which == 3);
+    else if (e.button) rightclick = (e.button == 2);
+    if (rightclick) {
+	response = hooks.callAll("aceContextMenu", me);
+	console.log(response);
+	//return false;
+    }
+    return true;
+}
 
 domline.addToLineClass = function(lineClass, cls)
 {
@@ -174,7 +188,7 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
         simpleTags.reverse();
         extraCloseTags = '</' + simpleTags.join('></') + '>' + extraCloseTags;
       }
-      html.push('<span class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
+      html.push('<span onContextMenu="return window.clickedon(this);" class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
     }
   };
   result.clearSpans = function()
