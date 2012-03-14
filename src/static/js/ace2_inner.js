@@ -22,6 +22,13 @@
 
 var Ace2Common = require('ep_etherpad-lite/static/js/ace2_common');
 
+/*
+var preq = require('ep_etherpad-lite/static/js/pluginfw/parent_require');
+
+preq.getRequirementFromParent('ep_etherpad-lite/static/js/pluginfw/hooks');
+preq.getRequirementFromParent('ep_etherpad-lite/static/js/pluginfw/plugins');
+*/
+
 // Extract useful method defined in the other module.
 var isNodeText = Ace2Common.isNodeText;
 var object = Ace2Common.object;
@@ -49,12 +56,6 @@ var linestylefilter = require('ep_etherpad-lite/static/js/linestylefilter').line
 var newSkipList = require('ep_etherpad-lite/static/js/skiplist').newSkipList;
 var undoModule = require('ep_etherpad-lite/static/js/undomodule').undoModule;
 var makeVirtualLineView = require('ep_etherpad-lite/static/js/virtual_lines').makeVirtualLineView;
-var plugin = require("ep_etherpad-lite/static/js/pluginfw/plugins");
-var jquery = require("ep_etherpad-lite/static/js/jquery");
-
-plugin.ensure(function() {
-});
-
 
 function Ace2Inner(){
   var DEBUG = false; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"

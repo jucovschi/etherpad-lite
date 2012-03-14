@@ -179,6 +179,10 @@ function Ace2Editor()
       buffer.push('<script type="text/javascript" src="../static/js/require-kernel.js"><\/script>');
       buffer.push('<script type="text/javascript">');
       buffer.push('require.setRootURI("../minified/"); require.setLibraryURI("../minified/plugins/"); require.setGlobalKeyPath("require");');
+      buffer.push('var preq = require("ep_etherpad-lite/static/js/pluginfw/parent_require"); \
+preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/hooks"); \
+preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plugins");');
+
       buffer.push('<\/script>');
       buffer.push('<script type="application/javascript" src="' + ACE_SOURCE + '"><\/script>');
       buffer.push('<script type="text/javascript">');
