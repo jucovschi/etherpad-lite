@@ -279,6 +279,10 @@
 		padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
 	      });
             }());
+            var moreCSS = hooks.callAll("aceAddCSS", {});
+	    for (var i=0; i<moreCSS.length; i++) {
+		console.log(moreCSS[i]);
+	    }
         </script>
         
 </html>

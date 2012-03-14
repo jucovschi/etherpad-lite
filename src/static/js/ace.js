@@ -258,7 +258,7 @@ preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plug
       $$INCLUDE_CSS("../static/css/iframe_editor.css");
       $$INCLUDE_CSS("../static/css/pad.css");
       $$INCLUDE_CSS("../static/custom/pad.css");
-      var moreCSS = hooks.callAll("aceAddCSS", {});
+      var moreCSS = hooks.callAll("aceAddInnerCSS", {});
       for (var i = 0; i < moreCSS.length; i++)
         $$INCLUDE_CSS(moreCSS[i]);
       pushStyleTagsFor(iframeHTML, includedCSS);
@@ -284,7 +284,7 @@ preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plug
       iframeHTML.push('</head><body id="innerdocbody" class="syntax" spellcheck="false">&nbsp;</body></html>');
 
 
-      var moreJS = hooks.callAll("aceAddJS", {});
+      var moreJS = hooks.callAll("aceAddInnerJS", {});
       for (var i = 0; i < moreJS.length; i++) {
 	  iframeHTML.push('<script type="text/javascript" src="'+moreJS[i]+'"></script>');
       }
