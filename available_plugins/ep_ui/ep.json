@@ -1,0 +1,19 @@
+{
+  "parts": [
+    {
+      "name": "ui",
+      "pre": ["ep_fintest/somepart"],
+      "post" : [],
+      "hooks": {
+	"expressCreateServer": "ep_ui/ui:expressCreateServer"
+      },
+      "client_hooks": {
+	"aceAttribsToClasses": "ep_ui/static/ui-client:onAceAttribsToClasses",
+	"aceContextMenu": "ep_ui/static/ui-client:onContextMenu",
+	"aceAddCSS": "ep_ui/static/ui-client:onAddCSS",
+	"aceAddInnerCSS": "ep_ui/static/ui-client:onAddInnerCSS",
+	"aceAddJS": "ep_ui/static/ui-client:onAddJS"
+      }
+    }
+  ]
+}

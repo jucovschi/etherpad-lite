@@ -5,9 +5,8 @@
       "pre": ["ep_fintest/somepart"],
       "post" : [],
       "hooks": {
-	"srvGenChangeset": "ep_termspotter/termspotter:onNewChanges"
-      },
-      "client_hooks": {
+	"srvGenChangeset": "ep_termspotter/termspotter:onNewChanges",
+	"onUIEvent": "ep_termspotter/termspotter:onUIEvent"
       }
     }
   ]

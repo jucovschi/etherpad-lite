@@ -277,12 +277,19 @@
 		chat = require('ep_etherpad-lite/static/js/chat').chat;
 		padeditbar = require('ep_etherpad-lite/static/js/pad_editbar').padeditbar;
 		padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
+		var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
+            	var moreCSS = hooks.callAll("aceAddCSS", {});
+	    	for (var i=0; i<moreCSS.length; i++) {
+		$("head").append($("<link rel='stylesheet' href='"+moreCSS[i]+"' type='text/css' media='screen' />"));
+	    	}
+
+            	var moreJS = hooks.callAll("aceAddJS", {});
+	    	for (var i=0; i<moreJS.length; i++) {
+		$("head").append($("<script src='"+moreJS[i]+"'/>"));
+	    	}
+
 	      });
             }());
-            var moreCSS = hooks.callAll("aceAddCSS", {});
-	    for (var i=0; i<moreCSS.length; i++) {
-		console.log(moreCSS[i]);
-	    }
         </script>
         
 </html>

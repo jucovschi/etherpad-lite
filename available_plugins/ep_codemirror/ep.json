@@ -8,7 +8,7 @@
 	"srvGenChangeset": "ep_codemirror/codemirror:onNewChanges"
       },
       "client_hooks": {
-	"aceInnerAddCSS": "ep_codemirror/static/codemirror:onAddCSS"
+	"aceAddInnerCSS": "ep_codemirror/static/codemirror-client:onAddCSS"
       }
     }
   ]

@@ -1,7 +1,7 @@
 {
   "parts": [
     {
-      "name": "termspotter",
+      "name": "combiner",
       "pre": ["ep_fintest/somepart"],
       "post" : [],
       "hooks": {

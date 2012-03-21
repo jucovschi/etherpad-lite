@@ -16,3 +16,22 @@ exports.attribsToClasses = function(hook_name, args, cb) {
     console.log(cb);
 }
 
+exports.onUIEvent = function(hook_name, args, cb) {
+    args = args.split("/");
+    if (args[0]=="choice") {
+	choices = [];	
+	args[1].split(".").forEach(function(elem) {
+	    term = autolinker.getDictioraryTerm(elem);
+	    choices.push({
+		"text": "Did you mean cd="+term.cd+" name="+term.name,
+		"val" : "apply/"+elem
+	    });
+	});
+	result = {
+	    title: "Did you mean:",
+	    choices: choices
+	};
+	return cb(result);
+    }
+    return cb([]);
+}

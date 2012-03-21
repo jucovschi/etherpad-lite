@@ -1,15 +1,37 @@
 var Changeset = require("ep_etherpad-lite/static/js/Changeset.js");
 var AttribFactory = require("ep_etherpad-lite/static/js/AttributePoolFactory");
-
 var linksrv = require("./linkersrv.js").linkersrv;
+var fs = require("fs");
+var path = require("path");
+var XmlStream = require("xml-stream");
+
 
 exports.autolinker = function() {
     var root = new trie.Trie();
-    root.add(["abbelian","group"], 0);
-    root.add(["group"], 1);
-    root.add(["triangle"], 2);
-    root.add(["right","triangle"], 3);
+    var dict = []; 
 
+    function parseDictionaryFile(fileName) {
+	var stream = fs.createReadStream(path.join(__dirname, fileName));
+	var xml = new XmlStream(stream);
+	xml.on("endElement: tnt:result", function(item) {
+	    if (typeof(item.term) == "undefined")
+		return;
+	    if (typeof(item.term.$text) == "undefined")
+		return;
+	    dict.push(
+		{text: item.term.$text,
+		 cd: item.term.$.cd,
+		 name: item.term.$.name}
+	    );
+	});
+	xml.on("endElement: tnt:results", function(item) {
+	    for (var i=0; i<dict.length; i++) {
+		var gr = dict[i].text.toLowerCase().split(" ");
+		root.add(gr, i); 
+	    }
+	});
+    }
+    
     function autolinker() {
     }
 
@@ -29,7 +51,7 @@ exports.autolinker = function() {
 	var events = [];
 	found = linksrv(atext.text, root, 0);
 	
-	for (i=0; i<found.length; ++i) {
+	for (var i=0; i<found.length; ++i) {
 	    found[i].text.sort();
 	    wid = found[i].text.join(".");
 	    events.push(new event("begin", found[i].start, wid));
@@ -47,7 +69,11 @@ exports.autolinker = function() {
 	for (var i=0; i<events.length; ++i) {
 	    if (events[i].pos > last) {
 		att = attr.join(".");
-		builder.keep(events[i].pos-last, 0, [["choice:termspotter", att]], apool);
+		attrib = [["choice:termspotter", att]];
+		if (attr.length>0) {
+		    attrib.push(["ui-decoration", "termref-suggestion"]);
+		}
+		builder.keep(events[i].pos-last, 0, attrib, apool);
 		last = events[i].pos;
 	    } 
 
@@ -58,8 +84,12 @@ exports.autolinker = function() {
 		attr.splice(id, 1);
 	    }
 	    if (events[i].type == "new_line") {
-		att = attr.join("");
-		builder.keep(1, 1, [["choice:termspotter",att]], apool);
+		att = attr.join(".");
+		attrib = [["choice:termspotter", att]];
+		if (attr.length>0) {
+		    attrib.push(["ui-decoration", "termref-suggestion"]);
+		}
+		builder.keep(1, 1, attrib, apool);
 		last = events[i].pos+1;
 	    }
 	}
@@ -71,18 +101,27 @@ exports.autolinker = function() {
 	var text = atext.text;
 	
     }
+
+    autolinker.getDictioraryTerm = function(id) {
+	return dict[id];
+    }
+
+    parseDictionaryFile("tntdefs.xml");
     
     return autolinker;
 }
 
 function test() {
-
     var linker = exports.autolinker();
-    apool = AttribFactory.createAttributePool();
-    atext = Changeset.makeAText("this is a group\n that is\n not however an abbelian\n group");
-    cs = linker.link(atext, apool);
-    console.log(cs);
-    console.log(apool);
+    var apool = AttribFactory.createAttributePool();
+    var atext = Changeset.makeAText("text node\n abelian group\n that is\n not however an abbelian\n group");
+    setTimeout(function() {
+	console.log("run");
+	cs = linker.link(atext, apool);
+	console.log(cs);
+	console.log(apool);	
+    }, 1000);
 }
+
 
 //test();
