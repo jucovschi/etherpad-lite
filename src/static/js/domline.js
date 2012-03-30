@@ -42,9 +42,13 @@ window.clickedon = function(me, e) {
     if (e.which) rightclick = (e.which == 3);
     else if (e.button) rightclick = (e.button == 2);
     if (rightclick) {
-	response = hooks.callAll("aceContextMenu", me);
-	console.log(response);
-	//return false;
+	var showMenu = false;
+	hooks.callAll("aceContextMenu", me).forEach(function(res) {
+	    if (res)
+		showMenu = true;
+	});
+	
+	return !showMenu;
     }
     return true;
 }

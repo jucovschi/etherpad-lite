@@ -23,13 +23,18 @@ exports.onUIEvent = function(hook_name, args, cb) {
 	args[1].split(".").forEach(function(elem) {
 	    term = autolinker.getDictioraryTerm(elem);
 	    choices.push({
-		"text": "Did you mean cd="+term.cd+" name="+term.name,
+		"text": " cd="+term.cd+" name="+term.name,
 		"val" : "apply/"+elem
 	    });
 	});
+	
 	result = {
-	    title: "Did you mean:",
-	    choices: choices
+	    title: "A semantic term was identified. Please choose the term reference to add",
+	    choices: choices,
+	    buttons: [{"title": "Insert reference",
+		       "value": "insert"},
+		      {"title": "Never show again",
+		       "value": "hideforever"}]
 	};
 	return cb(result);
     }
