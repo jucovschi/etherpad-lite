@@ -17,11 +17,14 @@ var contextMenu = null;
 var reg = new RegExp("choice-([^-]+)-([^ ]+)");
 
 exports.onContextMenu = function(hook_name, args, cb) {
-    className = args.className;
-    $args = $(args);
+    evt = args[0];
+    pos = args[1];
 
-    var posX = $args.offset().left+$args.width()+30;
-    var posY = $args.offset().top+40+$args.height();
+    className = evt.target.className;
+    $args = $(evt.target);
+
+    var posX = evt.pageX+30;
+    var posY = evt.pageY+40;
     var showMenu = false;
 
     var len = 0;

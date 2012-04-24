@@ -41,6 +41,11 @@ window.clickedon = function(me, e) {
     if (!e) var e = window.event;
     if (e.which) rightclick = (e.which == 3);
     else if (e.button) rightclick = (e.button == 2);
+    var line = 0;
+    console.log(e);
+    for (var nd = e.target.parentNode; typeof nd != "undefined"; nd = nd.previousSibling, line++);
+    console.log(line);
+
     if (rightclick) {
 	var showMenu = false;
 	hooks.callAll("aceContextMenu", me).forEach(function(res) {
@@ -192,7 +197,7 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
         simpleTags.reverse();
         extraCloseTags = '</' + simpleTags.join('></') + '>' + extraCloseTags;
       }
-      html.push('<span onContextMenu="return window.clickedon(this);" class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
+      html.push('<span class="', Security.escapeHTMLAttribute(cls || ''), '">', extraOpenTags, perTextNodeProcess(Security.escapeHTML(txt)), extraCloseTags, '</span>');
     }
   };
   result.clearSpans = function()

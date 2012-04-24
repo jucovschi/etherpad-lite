@@ -21,13 +21,7 @@
  */
 
 var Ace2Common = require('ep_etherpad-lite/static/js/ace2_common');
-
-/*
-var preq = require('ep_etherpad-lite/static/js/pluginfw/parent_require');
-
-preq.getRequirementFromParent('ep_etherpad-lite/static/js/pluginfw/hooks');
-preq.getRequirementFromParent('ep_etherpad-lite/static/js/pluginfw/plugins');
-*/
+var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
 
 // Extract useful method defined in the other module.
 var isNodeText = Ace2Common.isNodeText;
@@ -58,7 +52,7 @@ var undoModule = require('ep_etherpad-lite/static/js/undomodule').undoModule;
 var makeVirtualLineView = require('ep_etherpad-lite/static/js/virtual_lines').makeVirtualLineView;
 
 function Ace2Inner(){
-  var DEBUG = false; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
+  var DEBUG = true; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
   // changed to false 
   var isSetUp = false;
 
@@ -2875,7 +2869,6 @@ function Ace2Inner(){
   function repSelectionChange(selectStart, selectEnd, focusAtStart)
   {
     focusAtStart = !! focusAtStart;
-
     var newSelFocusAtStart = (focusAtStart && ((!selectStart) || (!selectEnd) || (selectStart[0] != selectEnd[0]) || (selectStart[1] != selectEnd[1])));
 
     if ((!equalLineAndChars(rep.selStart, selectStart)) || (!equalLineAndChars(rep.selEnd, selectEnd)) || (rep.selFocusAtStart != newSelFocusAtStart))
@@ -3292,6 +3285,18 @@ function Ace2Inner(){
     return [rep.lines.offsetOfIndex(lineRange[0]), rep.lines.offsetOfIndex(lineRange[1])];
   }
 
+    function handleContextMenu(evt) {
+	var sel = getSelection();
+	pos = getLineAndCharForPoint(sel.startPoint);
+	var showMenu = false;
+	hooks.callAll("aceContextMenu", [evt, pos]).forEach(function(res) {
+	    if (res)
+		showMenu = true;
+	});
+	if (showMenu)
+	   evt.preventDefault()
+    }
+
   function handleClick(evt)
   {
     inCallStack("handleClick", function()
@@ -3327,6 +3332,7 @@ function Ace2Inner(){
         evt.preventDefault();
       }
     }
+
     //hide the dropdownso
     if(window.parent.parent.padeditbar){ // required in case its in an iframe should probably use parent..  See Issue 327 https://github.com/Pita/etherpad-lite/issues/327
       window.parent.parent.padeditbar.toogleDropDown("none");
@@ -4681,6 +4687,10 @@ function Ace2Inner(){
     bindEventHandler(document, "keyup", handleKeyEvent);
     bindEventHandler(document, "click", handleClick);
     bindEventHandler(root, "blur", handleBlur);
+
+    var body = doc.getElementById("innerdocbody");
+    bindEventHandler(body, "contextmenu", handleContextMenu);
+
     if (browser.msie)
     {
       bindEventHandler(document, "click", handleIEOuterClick);
