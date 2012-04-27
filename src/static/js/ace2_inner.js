@@ -2071,7 +2071,6 @@ function Ace2Inner(){
   function performDocumentApplyChangeset(changes, insertsAfterSelection)
   {
     doRepApplyChangeset(changes, insertsAfterSelection);
-
     var requiredSelectionSetting = null;
     if (rep.selStart && rep.selEnd)
     {
@@ -2107,6 +2106,7 @@ function Ace2Inner(){
     };
 
     Changeset.mutateTextLines(changes, linesMutatee);
+      console.log("Lines mutatee",linesMutatee);
 
     checkALines();
 
@@ -3288,6 +3288,7 @@ function Ace2Inner(){
     function handleContextMenu(evt) {
 	var sel = getSelection();
 	pos = getLineAndCharForPoint(sel.startPoint);
+        var pos = rep.lines.offsetOfIndex(pos[0]) + pos[1];
 	var showMenu = false;
 	hooks.callAll("aceContextMenu", [evt, pos]).forEach(function(res) {
 	    if (res)
