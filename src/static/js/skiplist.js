@@ -20,11 +20,12 @@
  * limitations under the License.
  */
 
+var Ace2Common = require('./ace2_common'),
+  _ = require('./underscore');
 
-var noop = require('./ace2_common').noop;
+var noop = Ace2Common.noop;
 
-
-function newSkipList()
+function SkipList()
 {
   var PROFILER = window.PROFILER;
   if (!PROFILER)
@@ -154,6 +155,9 @@ function newSkipList()
     var widthLoc = point.widthSkips[0] + point.nodes[0].downSkipWidths[0];
     var newWidth = _entryWidth(entry);
     p.mark("loop1");
+    
+    // The new node will have at least level 1
+    // With a proability of 0.01^(n-1) the nodes level will be >= n
     while (newNode.levels == 0 || Math.random() < 0.01)
     {
       var lvl = newNode.levels;
@@ -284,27 +288,6 @@ function newSkipList()
     }
     return dist;
   }
-/*function _debugToString() {
-    var array = [start];
-    while (array[array.length-1] !== end) {
-      array[array.length] = array[array.length-1].downPtrs[0];
-    }
-    function getIndex(node) {
-      if (!node) return null;
-      for(var i=0;i<array.length;i++) {
-	if (array[i] === node)
-	  return i-1;
-      }
-      return false;
-    }
-    var processedArray = map(array, function(node) {
-      var x = {key:node.key, levels: node.levels, downSkips: node.downSkips,
-	upPtrs: map(node.upPtrs, getIndex), downPtrs: map(node.downPtrs, getIndex),
-	downSkipWidths: node.downSkipWidths};
-      return x;
-    });
-    return map(processedArray, function (x) { return x.toSource(); }).join("\n");
-  }*/
 
   function _getNodeByKey(key)
   {
@@ -345,8 +328,9 @@ function newSkipList()
 /*
 The skip-list contains "entries", JavaScript objects that each must have a unique "key" property
 that is a string.
-*/
-  var self = {
+  */
+  var self = this;
+  _.extend(this, {
     length: function()
     {
       return numNodes;
@@ -482,8 +466,7 @@ that is a string.
     {
       return start.levels;
     }
-  }
-  return self;
+  });
 }
 
-exports.newSkipList = newSkipList;
+module.exports = SkipList;

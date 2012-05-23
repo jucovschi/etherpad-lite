@@ -18,12 +18,12 @@ var async = require('async');
 var Buffer = require('buffer').Buffer;
 var fs = require('fs');
 var path = require('path');
-var server = require('../server');
 var zlib = require('zlib');
 var util = require('util');
+var settings = require('./Settings');
 
-var ROOT_DIR = path.normalize(__dirname + "/../");
-var CACHE_DIR = ROOT_DIR + '../var/';
+var CACHE_DIR = path.normalize(path.join(settings.root, 'var/'));
+CACHE_DIR = path.existsSync(CACHE_DIR) ? CACHE_DIR : undefined;
 
 var responseCache = {};
 
@@ -37,7 +37,7 @@ function CachingMiddleware() {
 }
 CachingMiddleware.prototype = new function () {
   function handle(req, res, next) {
-    if (!(req.method == "GET" || req.method == "HEAD")) {
+    if (!(req.method == "GET" || req.method == "HEAD") || !CACHE_DIR) {
       return next(undefined, req, res);
     }
 
@@ -73,6 +73,9 @@ CachingMiddleware.prototype = new function () {
       var _headers = {};
       old_res.setHeader = res.setHeader;
       res.setHeader = function (key, value) {
+        // Don't set cookies, see issue #707
+        if (key.toLowerCase() === 'set-cookie') return;
+
         _headers[key.toLowerCase()] = value;
         old_res.setHeader.call(res, key, value);
       };

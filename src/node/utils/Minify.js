@@ -27,19 +27,22 @@ var cleanCSS = require('clean-css');
 var jsp = require("uglify-js").parser;
 var pro = require("uglify-js").uglify;
 var path = require('path');
+var plugins = require("ep_etherpad-lite/static/js/pluginfw/plugins");
 var RequireKernel = require('require-kernel');
-var server = require('../server');
 
 var ROOT_DIR = path.normalize(__dirname + "/../../static/");
 var TAR_PATH = path.join(__dirname, 'tar.json');
 var tar = JSON.parse(fs.readFileSync(TAR_PATH, 'utf8'));
 
 // Rewrite tar to include modules with no extensions and proper rooted paths.
+var LIBRARY_PREFIX = 'ep_etherpad-lite/static/js';
 exports.tar = {};
 for (var key in tar) {
-  exports.tar['/' + key] =
-    tar[key].map(function (p) {return '/' + p}).concat(
-      tar[key].map(function (p) {return '/' + p.replace(/\.js$/, '')})
+  exports.tar[LIBRARY_PREFIX + '/' + key] =
+    tar[key].map(function (p) {return LIBRARY_PREFIX + '/' + p}).concat(
+      tar[key].map(function (p) {
+        return LIBRARY_PREFIX + '/' + p.replace(/\.js$/, '')
+      })
     );
 }
 
@@ -61,6 +64,22 @@ exports.minify = function(req, res, next)
     res.writeHead(404, {});
     res.end();
     return; 
+  }
+
+  /* Handle static files for plugins:
+     paths like "plugins/ep_myplugin/static/js/test.js"
+     are rewritten into ROOT_PATH_OF_MYPLUGIN/static/js/test.js,
+     commonly ETHERPAD_ROOT/node_modules/ep_myplugin/static/js/test.js
+  */
+  var match = filename.match(/^plugins\/([^\/]+)\/static\/(.*)/);
+  if (match) {
+    var pluginName = match[1];
+    var resourcePath = match[2];
+    var plugin = plugins.plugins[pluginName];
+    if (plugin) {
+      var pluginPath = plugin.package.realPath;
+      filename = path.relative(ROOT_DIR, pluginPath + '/static/' + resourcePath);
+    }
   }
 
   // What content type should this be?
@@ -89,10 +108,10 @@ exports.minify = function(req, res, next)
       date = new Date(date);
       res.setHeader('last-modified', date.toUTCString());
       res.setHeader('date', (new Date()).toUTCString());
-      if (server.maxAge) {
-        var expiresDate = new Date((new Date()).getTime()+server.maxAge*1000);
+      if (settings.maxAge !== undefined) {
+        var expiresDate = new Date((new Date()).getTime()+settings.maxAge*1000);
         res.setHeader('expires', expiresDate.toUTCString());
-        res.setHeader('cache-control', 'max-age=' + server.maxAge);
+        res.setHeader('cache-control', 'max-age=' + settings.maxAge);
       }
     }
 
@@ -112,7 +131,10 @@ exports.minify = function(req, res, next)
         res.end();
       } else if (req.method == 'GET') {
         getFileCompressed(filename, contentType, function (error, content) {
-          if(ERR(error)) return;
+          if(ERR(error, function(){
+            res.writeHead(500, {});
+            res.end();
+          })) return;
           res.header("Content-Type", contentType);
           res.writeHead(200, {});
           res.write(content);

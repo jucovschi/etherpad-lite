@@ -1,3 +1,6 @@
+<%
+  var settings = require("ep_etherpad-lite/node/utils/Settings");
+%>
 <!doctype html>
 <html>
 
@@ -7,69 +10,115 @@
         <meta name="robots" content="noindex, nofollow">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 
+        <link rel="shortcut icon" href="../favicon.ico">
+
+        <% e.begin_block("styles"); %>
         <link href="../static/css/pad.css" rel="stylesheet">
         <link href="../static/custom/pad.css" rel="stylesheet">
         <style title="dynamicsyntax"></style>
+        <% e.end_block(); %>
 
         <!-- head and body had been removed intentionally -->
 
-        <div id="editbar">
-            <ul id="menu_left">
-                <li id="bold" onClick="window.pad&amp;&amp;pad.editbarClick('bold');return false">
-                    <a class="buttonicon buttonicon-bold" title="Bold (ctrl-B)"></a>
+        <% e.begin_block("body"); %>
+        <div id="editbar" class="toolbar">
+            <ul class="menu_left">
+                <% e.begin_block("editbarMenuLeft"); %>
+                <li id="bold" data-key="bold">
+                    <a class="grouped-left" title="Bold (ctrl-B)">
+                      <span class="buttonicon buttonicon-bold"></span>
+                    </a>
                 </li>
-                <li id="italic" onClick="window.pad&amp;&amp;pad.editbarClick('italic'); return false;">
-                    <a class="buttonicon buttonicon-italic" title="Italics (ctrl-I)"></a>
+                <li id="italic" data-key="italic">
+                    <a class="grouped-middle" title="Italics (ctrl-I)">
+                      <span class="buttonicon buttonicon-italic"></span>
+                    </a>
                 </li>
-                <li id="underline" onClick="window.pad&amp;&amp;pad.editbarClick('underline');return false;" >
-                    <a class="buttonicon buttonicon-underline" title="Underline (ctrl-U)"></a>
+                <li id="underline" data-key="underline">
+                    <a class="grouped-middle" title="Underline (ctrl-U)">
+                      <span class="buttonicon buttonicon-underline"></span>
+                    </a>
                 </li>
-                <li id="strikethrough" onClick="window.pad&amp;&amp;pad.editbarClick('strikethrough');return false;">
-                    <a class="buttonicon buttonicon-strikethrough" title="Strikethrough"></a>
-                </li>
-                <li class="separator"></li>
-                <li id="oderedlist" onClick="window.pad&amp;&amp;pad.editbarClick('insertorderedlist');return false;">
-                    <a class="buttonicon buttonicon-insertorderedlist" title="Toggle Ordered List"></a>
-                </li>
-                <li id="unoderedlist" onClick="window.pad&amp;&amp;pad.editbarClick('insertunorderedlist');return false;">
-                    <a class="buttonicon buttonicon-insertunorderedlist" title="Toggle Bullet List"></a>
-                </li>
-                <li id="indent" onClick="window.pad&amp;&amp;pad.editbarClick('indent');return false;">
-                    <a class="buttonicon buttonicon-indent" title="Indent"></a>
-                </li>
-                <li id="outdent" onClick="window.pad&amp;&amp;pad.editbarClick('outdent');return false;">
-                    <a class="buttonicon buttonicon-outdent" title="Unindent"></a>
+                <li id="strikethrough" data-key="strikethrough">
+                    <a class="grouped-right" title="Strikethrough">
+                      <span class="buttonicon buttonicon-strikethrough"></span>
+                    </a>
                 </li>
                 <li class="separator"></li>
-                <li id="undo" onClick="window.pad&amp;&amp;pad.editbarClick('undo');return false;">
-                    <a class="buttonicon buttonicon-undo" title="Undo (ctrl-Z)"></a>
+                <li id="oderedlist" data-key="insertorderedlist">
+                    <a class="grouped-left" title="Toggle Ordered List">
+                      <span class="buttonicon buttonicon-insertorderedlist"></span>
+                    </a>
                 </li>
-                <li id="redo" onClick="window.pad&amp;&amp;pad.editbarClick('redo');return false;">
-                    <a class="buttonicon buttonicon-redo" title="Redo (ctrl-Y)"></a>
+                <li id="unoderedlist" data-key="insertunorderedlist">
+                    <a class="grouped-middle" title="Toggle Bullet List">
+                      <span class="buttonicon buttonicon-insertunorderedlist"></span>
+                    </a>
+                </li>
+                <li id="indent" data-key="indent">
+                    <a class="grouped-middle" title="Indent">
+                      <span class="buttonicon buttonicon-indent"></span>
+                    </a>
+                </li>
+                <li id="outdent" data-key="outdent">
+                    <a class="grouped-right" title="Unindent">
+                      <span class="buttonicon buttonicon-outdent"></span>
+                    </a>
                 </li>
                 <li class="separator"></li>
-                <li id="clearAuthorship" onClick="window.pad&amp;&amp;pad.editbarClick('clearauthorship');return false;">
-                    <a class="buttonicon buttonicon-clearauthorship" title="Clear Authorship Colors"></a>
+                <li id="undo" data-key="undo">
+                    <a class="grouped-left" title="Undo (ctrl-Z)">
+                      <span class="buttonicon buttonicon-undo"></span>
+                    </a>
                 </li>
-            </ul>    
-            <ul id="menu_right">
-                <li id="settingslink" onClick="window.pad&amp;&amp;pad.editbarClick('settings');return false;">
-                    <a class="buttonicon buttonicon-settings" id="settingslink" title="Settings of this pad"></a>
-                </li>
-                <li id="importexportlink" onClick="window.pad&amp;&amp;pad.editbarClick('import_export');return false;">
-                    <a class="buttonicon buttonicon-import_export" id="exportlink" title="Import/Export from/to different document formats"></a>
-                </li>
-                <li id="embedlink" onClick="window.pad&amp;&amp;pad.editbarClick('embed');return false;" >
-                    <a class="buttonicon buttonicon-embed" id="embedlink" title="Share and Embed this pad"></a>
+                <li id="redo" data-key="redo">
+                    <a class="grouped-right" title="Redo (ctrl-Y)">
+                      <span class="buttonicon buttonicon-redo"></span>
+                    </a>
                 </li>
                 <li class="separator"></li>
-                <li id="timesliderlink" onClick="document.location = document.location.pathname+ '/timeslider'">
-                    <a class="buttonicon buttonicon-history" title="Show the history of this pad"></a>
+                <li id="clearAuthorship" data-key="clearauthorship">
+                    <a title="Clear Authorship Colors">
+                      <span class="buttonicon buttonicon-clearauthorship"></span>
+                    </a>
                 </li>
-                <li id="usericon" onClick="window.pad&amp;&amp;pad.editbarClick('showusers');return false;" title="Show connected users">
-                    <span class="buttonicon buttonicon-showusers" id="usericonback"></span>
-                    <span id="online_count">1</span>
+                <% e.end_block(); %>
+            </ul>
+            <ul class="menu_right">
+                <% e.begin_block("editbarMenuRight"); %>
+                <li data-key="settings">
+                    <a class="grouped-left" id="settingslink" title="Settings of this pad">
+                        <span class="buttonicon buttonicon-settings"></span>
+                    </a>
                 </li>
+                <li data-key="import_export">
+                    <a class="grouped-middle" id="importexportlink" title="Import/Export from/to different document formats">
+                        <span class="buttonicon buttonicon-import_export"></span>
+                    </a>
+                </li>
+                <li data-key="embed">
+                    <a class="grouped-middle" id="embedlink" title="Share and Embed this pad">
+                        <span class="buttonicon buttonicon-embed"></span>
+                    </a>
+                </li>
+                <li data-key="savedRevision">
+                    <a class="grouped-right" id="revisionlink" title="Mark this revision as a saved revision">
+                        <span class="buttonicon buttonicon-savedRevision"></span>
+                    </a>
+                </li>
+                <li class="separator"></li>
+                <li onClick="document.location = document.location.pathname+ '/timeslider'">
+                    <a id="timesliderlink" title="Show the history of this pad">
+                        <span class="buttonicon buttonicon-history"></span>
+                    </a>
+                </li>
+                <li id="usericon" data-key="showusers">
+                    <a title="Show connected users">
+                        <span class="buttonicon buttonicon-showusers"></span>
+                        <span id="online_count">1</span>
+                    </a>
+                </li>
+                <% e.end_block(); %>
             </ul>
         </div>
 
@@ -81,17 +130,17 @@
                     <button id="mycolorpickersave">Save</button>
                     <button id="mycolorpickercancel">Cancel</button>
                     <span id="mycolorpickerpreview" class="myswatchboxhoverable"></span>
-                </div>   
+                </div>
                 <div id="myswatchbox"><div id="myswatch"></div></div>
                 <div id="myusernameform"><input type="text" id="myusernameedit" disabled="disabled"></div>
-                <div id="mystatusform"><input type="text" id="mystatusedit" disabled="disabled"></div>   
+                <div id="mystatusform"><input type="text" id="mystatusedit" disabled="disabled"></div>
             </div>
             <div id="otherusers">
                 <div id="guestprompts"></div>
                 <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
                     <tr><td></td></tr>
                 </table>
-                <div id="nootherusers"></div>       
+                <div id="nootherusers"></div>
             </div>
             <div id="userlistbuttonarea"></div>
         </div>
@@ -101,9 +150,10 @@
             <div id="editorloadingbox">Loading...</div>
         </div>
 
-        <div id="settingsmenu" class="popup">
+        <div id="settings" class="popup">
             <h1>Pad settings</h1>
             <div class="column">
+                <% e.begin_block("mySettings"); %>
                 <h2>My view</h2>
                 <p>
                     <input type="checkbox" id="options-stickychat" onClick="chat.stickToScreen();">
@@ -124,47 +174,53 @@
                         <option value="monospace">Monospaced</option>
                     </select>
                 </p>
+                <% e.end_block(); %>
             </div>
             <div class="column">
+                <% e.begin_block("globalSettings"); %>
                 <h2>Global view</h2>
-                <p>Currently nothing.</p>
-                <p class="note">These options affect everyone viewing this pad.</p>
+                <% e.end_block(); %>
             </div>
         </div>
 
         <div id="importexport" class="popup">
+            <h1>Import/Export</h1>
             <div class="column">
-                <h2>Import from text file, HTML, PDF, Word, ODT or RTF</h2><br>
+                <% e.begin_block("importColumn"); %>
+                <h2>Upload any text file or document</h2><br>
                 <form id="importform" method="post" action="" target="importiframe" enctype="multipart/form-data">
-                    <div class="importformdiv" id="importformfilediv"> 
-                        <input type="file" name="file" size="15" id="importfileinput"> 
-                        <div class="importmessage" id="importmessagefail"></div> 
-                    </div> 
+                    <div class="importformdiv" id="importformfilediv">
+                        <input type="file" name="file" size="15" id="importfileinput">
+                        <div class="importmessage" id="importmessagefail"></div>
+                    </div>
                     <div id="import"></div>
-                    <div class="importmessage" id="importmessagesuccess">Successful!</div> 
-                    <div class="importformdiv" id="importformsubmitdiv"> 
-                        <input type="hidden" name="padId" value="blpmaXT35R"> 
-                        <span class="nowrap"> 
-                            <input type="submit" name="submit" value="Import Now" disabled="disabled" id="importsubmitinput"> 
-                            <img alt="" id="importstatusball" src="../static/img/loading.gif" align="top"> 
-                            <img alt="" id="importarrow" src="../static/img/leftarrow.png" align="top"> 
-                        </span> 
-                    </div> 
+                    <div class="importmessage" id="importmessagesuccess">Successful!</div>
+                    <div class="importformdiv" id="importformsubmitdiv">
+                        <input type="hidden" name="padId" value="blpmaXT35R">
+                        <span class="nowrap">
+                            <input type="submit" name="submit" value="Import Now" disabled="disabled" id="importsubmitinput">
+                            <img alt="" id="importstatusball" src="../static/img/loading.gif" align="top">
+                            <img alt="" id="importarrow" src="../static/img/leftarrow.png" align="top">
+                        </span>
+                    </div>
                 </form>
+                <% e.end_block(); %>
             </div>
             <div class="column">
                 <h2>Export current pad as</h2>
+                <% e.begin_block("exportColumn"); %>
                 <a id="exporthtmla" target="_blank" class="exportlink"><div class="exporttype" id="exporthtml">HTML</div></a>
                 <a id="exportplaina" target="_blank" class="exportlink"><div class="exporttype" id="exportplain">Plain text</div></a>
                 <a id="exportworda" target="_blank" class="exportlink"><div class="exporttype" id="exportword">Microsoft Word</div></a>
                 <a id="exportpdfa" target="_blank" class="exportlink"><div class="exporttype" id="exportpdf">PDF</div></a>
                 <a id="exportopena" target="_blank" class="exportlink"><div class="exporttype" id="exportopen">OpenDocument</div></a>
                 <a id="exportdokuwikia" target="_blank" class="exportlink"><div class="exporttype" id="exportdokuwiki">DokuWiki text</div></a>
-                <a id="exportwordlea" target="_blank" onClick="padimpexp.export2Wordle();return false;" class="exportlink"><div class="exporttype" id="exportwordle">Wordle</div></a>
+                <% e.end_block(); %>
             </div>
         </div>
 
         <div id="embed" class="popup">
+            <% e.begin_block("embedPopup"); %>
             <div id="embedreadonly" class="right">
                 <input type="checkbox" id="readonlyinput" onClick="padeditbar.setEmbedLinks();">
                 <label for="readonlyinput">Read only</label>
@@ -179,11 +235,7 @@
                 <h2>Embed URL</h2>
                 <input id="embedinput" type="text" value="">
             </div>
-            <br>
-            <div id="qrcode">
-                <h2>QR code</h2>
-                <div id="qr_center"><img id="embedreadonlyqr"></div>
-            </div>
+            <% e.end_block(); %>
         </div>
 
         <div id="chatthrob"></div>
@@ -209,8 +261,9 @@
         <div id="modaloverlay">
             <div id="modaloverlay-inner"></div>
         </div>
-        
+
         <div id="mainmodals">
+            <% e.begin_block("modals"); %>
             <div id="connectionbox" class="modaldialog">
                 <div id="connectionboxinner" class="modaldialog-inner">
                     <div class="connecting">Connecting...</div>
@@ -254,23 +307,41 @@
                     <input type="hidden" class="missedChanges" name="missedChanges">
                 </form>
             </div>
-            
+            <% e.end_block(); %>
         </div>
+        <% e.end_block(); %>
 
+        <% e.begin_block("scripts"); %>
         <script type="text/javascript" src="../static/js/require-kernel.js"></script>
         <script type="text/javascript" src="../static/js/jquery.js"></script>
         <script type="text/javascript" src="../socket.io/socket.io.js"></script>
-        <script type="text/javascript" src="../minified/pad.js?callback=require.define"></script>
+        <script type="text/javascript" src="../javascripts/lib/ep_etherpad-lite/static/js/pad.js?callback=require.define"></script>
         <script type="text/javascript">
+            if ((!$.browser.msie) && (!($.browser.mozilla && $.browser.version.indexOf("1.8.") == 0)))
+            {
+              document.domain = document.domain; // for comet
+            }
+
             var clientVars = {};
             (function () {
-              require.setRootURI("../minified/");
-              require.setLibraryURI("../minified/plugins/");
+              
+              
+              var pathComponents = location.pathname.split('/');
+              
+              // Strip 'p' and the padname from the pathname and set as baseURL
+              var baseURL = pathComponents.slice(0,pathComponents.length-2).join('/') + '/';
+                            
+              require.setRootURI(baseURL + "javascripts/src");
+              require.setLibraryURI(baseURL + "javascripts/lib");
               require.setGlobalKeyPath("require");
 
               var plugins = require('ep_etherpad-lite/static/js/pluginfw/plugins');
-	      plugins.update(function () {
-		require('ep_etherpad-lite/static/js/pad').init();
+              plugins.baseURL = baseURL;
+              plugins.update(function () {
+                var pad = require('ep_etherpad-lite/static/js/pad');
+                pad.baseURL = baseURL;
+                pad.init();
+              });
 
 		/* TODO: These globals shouldn't exist. */
 		pad = require('ep_etherpad-lite/static/js/pad').pad;
@@ -291,5 +362,5 @@
 	      });
             }());
         </script>
-        
+        <% e.end_block(); %>
 </html>

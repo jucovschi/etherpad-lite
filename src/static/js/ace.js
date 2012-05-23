@@ -28,7 +28,8 @@ Ace2Editor.registry = {
   nextId: 1
 };
 
-var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
+var hooks = require('./pluginfw/hooks');
+var _ = require('./underscore');
 
 function Ace2Editor()
 {
@@ -70,7 +71,7 @@ function Ace2Editor()
 
   function doActionsPendingInit()
   {
-    $.each(actionsPendingInit, function(i,fn){
+    _.each(actionsPendingInit, function(fn,i){
       fn()
     });
     actionsPendingInit = [];
@@ -87,7 +88,7 @@ function Ace2Editor()
   'setUserChangeNotificationCallback', 'setAuthorInfo',
   'setAuthorSelectionRange', 'callWithAce', 'execCommand', 'replaceRange'];
   
-  $.each(aceFunctionsPendingInit, function(i,fnName){
+  _.each(aceFunctionsPendingInit, function(fnName,i){
     var prefix = 'ace_';
     var name = prefix + fnName;
     editor[fnName] = pendingInit(function(){
@@ -156,39 +157,45 @@ function Ace2Editor()
   }
   function pushRequireScriptTo(buffer) {
     var KERNEL_SOURCE = '../static/js/require-kernel.js';
-    var KERNEL_BOOT = 'require.setRootURI("../minified/");\nrequire.setLibraryURI("../minified/plugins/");\nrequire.setGlobalKeyPath("require");'
+    var KERNEL_BOOT = '\
+require.setRootURI("../javascripts/src");\n\
+require.setLibraryURI("../javascripts/lib");\n\
+require.setGlobalKeyPath("require");\n\
+';
     if (Ace2Editor.EMBEDED && Ace2Editor.EMBEDED[KERNEL_SOURCE]) {
       buffer.push('<script type="text/javascript">');
       buffer.push(Ace2Editor.EMBEDED[KERNEL_SOURCE]);
       buffer.push(KERNEL_BOOT);
       buffer.push('<\/script>');
-    }
+    } else {
+      file = KERNEL_SOURCE;
+      buffer.push('<script type="application/javascript" src="' + KERNEL_SOURCE + '"><\/script>');
+      buffer.push('<script type="text/javascript">');
+      buffer.push(KERNEL_BOOT);
+      buffer.push('<\/script>');
+    } 
   }
   function pushScriptsTo(buffer) {
     /* Folling is for packaging regular expression. */
-    /* $$INCLUDE_JS("../minified/ace2_inner.js?callback=require.define"); */
-    var ACE_SOURCE = '../minified/ace2_inner.js?callback=require.define';
+    /* $$INCLUDE_JS("../javascripts/src/ace2_inner.js?callback=require.define"); */
+    /* $$INCLUDE_JS("../javascripts/src/ace2_common.js?callback=require.define"); */
+    var ACE_SOURCE = '../javascripts/src/ace2_inner.js?callback=require.define';
+    var ACE_COMMON = '../javascripts/src/ace2_common.js?callback=require.define';
     if (Ace2Editor.EMBEDED && Ace2Editor.EMBEDED[ACE_SOURCE]) {
       buffer.push('<script type="text/javascript">');
       buffer.push(Ace2Editor.EMBEDED[ACE_SOURCE]);
-      buffer.push('require("ep_etherpad-lite/static/js/ace2_inner");');
+      buffer.push(Ace2Editor.EMBEDED[ACE_COMMON]);
       buffer.push('<\/script>');
     } else {
-      file = ACE_SOURCE;
-      file = file.replace(/^\.\.\/static\/js\//, '../minified/');
-      buffer.push('<script type="text/javascript" src="../static/js/require-kernel.js"><\/script>');
       buffer.push('<script type="text/javascript">');
-      buffer.push('require.setRootURI("../minified/"); require.setLibraryURI("../minified/plugins/"); require.setGlobalKeyPath("require");');
+	/** @Constantin: check if this is still necessary **/
       buffer.push('var preq = require("ep_etherpad-lite/static/js/pluginfw/parent_require"); \
 preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/hooks"); \
 preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pad_utils.js"); \
 preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plugins");');
-
       buffer.push('<\/script>');
       buffer.push('<script type="application/javascript" src="' + ACE_SOURCE + '"><\/script>');
-      buffer.push('<script type="text/javascript">');
-      buffer.push('require("ep_etherpad-lite/static/js/ace2_inner");');
-      buffer.push('<\/script>');
+      buffer.push('<script type="application/javascript" src="' + ACE_COMMON + '"><\/script>');
     }
   }
   function pushStyleTagsFor(buffer, files) {
@@ -238,17 +245,11 @@ preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plug
 
       iframeHTML.push(doctype);
       iframeHTML.push("<html><head>");
+      iframeHTML.push('<script type="text/javascript" src="../static/js/jquery.js"></script>');
 
-      // For compatability's sake transform in and out.
-      for (var i = 0, ii = iframeHTML.length; i < ii; i++) {
-        iframeHTML[i] = JSON.stringify(iframeHTML[i]);
-      }
       hooks.callAll("aceInitInnerdocbodyHead", {
         iframeHTML: iframeHTML
       });
-      for (var i = 0, ii = iframeHTML.length; i < ii; i++) {
-        iframeHTML[i] = JSON.parse(iframeHTML[i]);
-      }
 
       // calls to these functions ($$INCLUDE_...)  are replaced when this file is processed
       // and compressed, putting the compressed code from the named file directly into the
@@ -259,27 +260,34 @@ preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plug
       $$INCLUDE_CSS("../static/css/iframe_editor.css");
       $$INCLUDE_CSS("../static/css/pad.css");
       $$INCLUDE_CSS("../static/custom/pad.css");
-      var moreCSS = hooks.callAll("aceAddInnerCSS", {});
-      for (var i = 0; i < moreCSS.length; i++)
-        $$INCLUDE_CSS(moreCSS[i]);
+      
+      var additionalCSS = _(hooks.callAll("aceEditorCSS")).map(function(path){ return '../static/plugins/' + path });
+      includedCSS = includedCSS.concat(additionalCSS);
+      
       pushStyleTagsFor(iframeHTML, includedCSS);
 
       var includedJS = [];
-      var $$INCLUDE_JS = function(filename) {includedJS.push(filename)};
-
       pushRequireScriptTo(iframeHTML);
+      pushScriptsTo(iframeHTML);
+
       // Inject my plugins into my child.
       iframeHTML.push('\
-<script type="text/javascript" src="../static/js/require-kernel.js"></script>\
 <script type="text/javascript">\
-  require.setRootURI("../minified/"); require.setLibraryURI("../minified/plugins/"); require.setGlobalKeyPath("require");\
+  parent_req = require("./pluginfw/parent_require.js");\
+  parent_req.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/hooks");\
+  parent_req.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plugins");\
+  parent_req.getRequirementFromParent(require, "./pluginfw/hooks");\
+  parent_req.getRequirementFromParent(require, "./pluginfw/plugins");\
   require.define("/plugins", null);\n\
   require.define("/plugins.js", function (require, exports, module) {\
     module.exports = require("ep_etherpad-lite/static/js/plugins");\
   });\
 </script>\
 ');
-      pushScriptsTo(iframeHTML);
+
+      iframeHTML.push('<script type="text/javascript">');
+      iframeHTML.push('require("ep_etherpad-lite/static/js/ace2_inner");');
+      iframeHTML.push('<\/script>');
 
       iframeHTML.push('<style type="text/css" title="dynamicsyntax"></style>');
       iframeHTML.push('</head><body id="innerdocbody" class="syntax" spellcheck="false">&nbsp;</body></html>');
@@ -305,6 +313,11 @@ preq.getRequirementFromParent(require, "ep_etherpad-lite/static/js/pluginfw/plug
       $$INCLUDE_CSS("../static/css/iframe_editor.css");
       $$INCLUDE_CSS("../static/css/pad.css");
       $$INCLUDE_CSS("../static/custom/pad.css");
+      
+      
+      var additionalCSS = _(hooks.callAll("aceEditorCSS")).map(function(path){ return '../static/plugins/' + path });
+      includedCSS = includedCSS.concat(additionalCSS);
+            
       pushStyleTagsFor(outerHTML, includedCSS);
 
       // bizarrely, in FF2, a file with no "external" dependencies won't finish loading properly

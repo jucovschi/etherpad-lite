@@ -22,7 +22,7 @@
 
  // These parameters were global, now they are injected. A reference to the
  // Timeslider controller would probably be more appropriate.
-var forEach = require('./ace2_common').forEach;
+var _ = require('./underscore');
 
 function loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded)
 {
@@ -162,49 +162,72 @@ function loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded)
 
     function showReconnectUI()
     {
-      if (!clientVars.sliderEnabled || !clientVars.supportsSlider)
-      {
-        $("#padmain, #rightbars").css('top', "130px");
-        $("#timeslider").show();
-      }
+      $("#padmain, #rightbars").css('top', "130px");
+      $("#timeslider").show();
       $('#error').show();
     }
 
+    var fixPadHeight = _.throttle(function(){
+      var height = $('#timeslider-top').height();
+      $('#editorcontainerbox').css({marginTop: height});
+    }, 600);
+    
     function setAuthors(authors)
     {
-      $("#authorstable").empty();
+      var authorsList = $("#authorsList");
+      authorsList.empty();
       var numAnonymous = 0;
       var numNamed = 0;
-      forEach(authors, function(author)
+      var colorsAnonymous = [];
+      _.each(authors, function(author)
       {
+        var authorColor =  clientVars.colorPalette[author.colorId] || author.colorId;
         if (author.name)
         {
+          if (numNamed !== 0) authorsList.append(', ');
+          
+          $('<span />')
+            .text(author.name || "unnamed")
+            .css('background-color', authorColor)
+            .addClass('author')
+            .appendTo(authorsList);
+
           numNamed++;
-          var tr = $('<tr></tr>');
-          var swatchtd = $('<td></td>');
-          var swatch = $('<div class="swatch"></div>');
-          swatch.css('background-color', clientVars.colorPalette[author.colorId]);
-          swatchtd.append(swatch);
-          tr.append(swatchtd);
-          var nametd = $('<td></td>');
-          nametd.text(author.name || "unnamed");
-          tr.append(nametd);
-          $("#authorstable").append(tr);
         }
         else
         {
           numAnonymous++;
+          if(authorColor) colorsAnonymous.push(authorColor);
         }
       });
       if (numAnonymous > 0)
       {
-        var html = "<tr><td colspan=\"2\" style=\"color:#999; padding-left: 10px\">" + (numNamed > 0 ? "...and " : "") + numAnonymous + " unnamed author" + (numAnonymous > 1 ? "s" : "") + "</td></tr>";
-        $("#authorstable").append($(html));
+        var anonymousAuthorString = numAnonymous + " unnamed author" + (numAnonymous > 1 ? "s" : "")
+        if (numNamed !== 0){
+          authorsList.append(' + ' + anonymousAuthorString);
+        } else {
+          authorsList.append(anonymousAuthorString);
+        }
+        
+        if(colorsAnonymous.length > 0){
+          authorsList.append(' (');
+          _.each(colorsAnonymous, function(color, i){
+            if( i > 0 ) authorsList.append(' '); 
+            $('<span>&nbsp;</span>')
+              .css('background-color', color)
+              .addClass('author author-anonymous')
+              .appendTo(authorsList);
+          });
+          authorsList.append(')');
+        }
+        
       }
       if (authors.length == 0)
       {
-        $("#authorstable").append($("<tr><td colspan=\"2\" style=\"color:#999; padding-left: 10px\">No Authors</td></tr>"))
+        authorsList.append("No Authors");
       }
+      
+      fixPadHeight();
     }
 
     BroadcastSlider = {
@@ -261,55 +284,52 @@ function loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded)
     {
       disableSelection($("#playpause_button")[0]);
       disableSelection($("#timeslider")[0]);
-
-      if (clientVars.sliderEnabled && clientVars.supportsSlider)
+      
+      $(document).keyup(function(e)
       {
-        $(document).keyup(function(e)
-        {
-          var code = -1;
-          if (!e) var e = window.event;
-          if (e.keyCode) code = e.keyCode;
-          else if (e.which) code = e.which;
+        var code = -1;
+        if (!e) var e = window.event;
+        if (e.keyCode) code = e.keyCode;
+        else if (e.which) code = e.which;
 
-          if (code == 37)
-          { // left
-            if (!e.shiftKey)
-            {
-              setSliderPosition(getSliderPosition() - 1);
-            }
-            else
-            {
-              var nextStar = 0; // default to first revision in document
-              for (var i = 0; i < savedRevisions.length; i++)
-              {
-                var pos = parseInt(savedRevisions[i].attr('pos'));
-                if (pos < getSliderPosition() && nextStar < pos) nextStar = pos;
-              }
-              setSliderPosition(nextStar);
-            }
-          }
-          else if (code == 39)
+        if (code == 37)
+        { // left
+          if (!e.shiftKey)
           {
-            if (!e.shiftKey)
-            {
-              setSliderPosition(getSliderPosition() + 1);
-            }
-            else
-            {
-              var nextStar = sliderLength; // default to last revision in document
-              for (var i = 0; i < savedRevisions.length; i++)
-              {
-                var pos = parseInt(savedRevisions[i].attr('pos'));
-                if (pos > getSliderPosition() && nextStar > pos) nextStar = pos;
-              }
-              setSliderPosition(nextStar);
-            }
+            setSliderPosition(getSliderPosition() - 1);
           }
-          else if (code == 32) playpause();
+          else
+          {
+            var nextStar = 0; // default to first revision in document
+            for (var i = 0; i < savedRevisions.length; i++)
+            {
+              var pos = parseInt(savedRevisions[i].attr('pos'));
+              if (pos < getSliderPosition() && nextStar < pos) nextStar = pos;
+            }
+            setSliderPosition(nextStar);
+          }
+        }
+        else if (code == 39)
+        {
+          if (!e.shiftKey)
+          {
+            setSliderPosition(getSliderPosition() + 1);
+          }
+          else
+          {
+            var nextStar = sliderLength; // default to last revision in document
+            for (var i = 0; i < savedRevisions.length; i++)
+            {
+              var pos = parseInt(savedRevisions[i].attr('pos'));
+              if (pos > getSliderPosition() && nextStar > pos) nextStar = pos;
+            }
+            setSliderPosition(nextStar);
+          }
+        }
+        else if (code == 32) playpause();
 
-        });
-      }
-
+      });
+      
       $(window).resize(function()
       {
         updateSliderElements();
@@ -459,38 +479,16 @@ function loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded)
           $("#revision").css('right', "20px");
           $("#revision").css('top', "20px");
         }
-
-
-        if (clientVars.sliderEnabled)
+        
+        $("#timeslider").show();
+        setSliderLength(clientVars.totalRevs);
+        setSliderPosition(clientVars.revNum);
+        
+        _.each(clientVars.savedRevisions, function(revision)
         {
-          if (clientVars.supportsSlider)
-          {
-            $("#padmain, #rightbars").css('top', "130px");
-            $("#timeslider").show();
-            setSliderLength(clientVars.totalRevs);
-            setSliderPosition(clientVars.revNum);
-            forEach(clientVars.savedRevisions, function(revision)
-            {
-              addSavedRevision(revision.revNum, revision);
-            })
-          }
-          else
-          {
-            // slider is not supported
-            $("#padmain, #rightbars").css('top', "130px");
-            $("#timeslider").show();
-            $("#error").html("The timeslider feature is not supported on this pad. <a href=\"/ep/about/faq#disabledslider\">Why not?</a>");
-            $("#error").show();
-          }
-        }
-        else
-        {
-          if (clientVars.supportsSlider)
-          {
-            setSliderLength(clientVars.totalRevs);
-            setSliderPosition(clientVars.revNum);
-          }
-        }
+          addSavedRevision(revision.revNum, revision);
+        })
+        
       }
     });
   })();

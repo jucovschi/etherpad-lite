@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * This module is started with bin/run.sh. It sets up a Express HTTP and a Socket.IO Server. 
  * Static file Requests are answered directly from this module, Socket.IO messages are passed 
@@ -30,6 +31,7 @@ var path = require('path');
 var plugins = require("ep_etherpad-lite/static/js/pluginfw/plugins");
 var hooks = require("ep_etherpad-lite/static/js/pluginfw/hooks");
 var npm = require("npm/lib/npm.js");
+var  _ = require("underscore");
 
 //try to get the git version
 var version = "";
@@ -51,9 +53,6 @@ console.log("Report bugs at https://github.com/Pita/etherpad-lite/issues")
 
 var serverName = "Etherpad-Lite " + version + " (http://j.mp/ep-lite)";
 
-//cache 6 hours
-exports.maxAge = 1000*60*60*6;
-
 //set loglevel
 log4js.setGlobalLogLevel(settings.loglevel);
 
@@ -67,9 +66,9 @@ async.waterfall([
   plugins.update,
 
   function (callback) {
-    console.log("Installed plugins: " + plugins.formatPlugins());
-    console.log("Installed parts:\n" + plugins.formatParts());
-    console.log("Installed hooks:\n" + plugins.formatHooks());
+    console.info("Installed plugins: " + plugins.formatPlugins());
+    console.debug("Installed parts:\n" + plugins.formatParts());
+    console.debug("Installed hooks:\n" + plugins.formatHooks());
     callback();
   },
 
@@ -90,8 +89,13 @@ async.waterfall([
     
     //let the server listen
     app.listen(settings.port, settings.ip);
-    console.log("Server is listening at " + settings.ip + ":" + settings.port);
-
+    console.log("You can access your Etherpad-Lite instance at http://" + settings.ip + ":" + settings.port + "/");
+    if(!_.isEmpty(settings.users)){
+      console.log("The plugin admin page is at http://" + settings.ip + ":" + settings.port + "/admin/plugins");
+    }
+    else{
+      console.warn("Admin username and password not set in settings.json.  To access admin please uncomment and edit 'users' in settings.json");
+    }
     callback(null);  
   }
 ]);

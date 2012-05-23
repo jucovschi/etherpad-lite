@@ -23,7 +23,8 @@ var ERR = require("async-stacktrace");
 var async = require("async");
 var padManager = require("../db/PadManager");
 var Changeset = require("ep_etherpad-lite/static/js/Changeset");
-var AttributePoolFactory = require("ep_etherpad-lite/static/js/AttributePoolFactory");
+var AttributePool = require("ep_etherpad-lite/static/js/AttributePool");
+var AttributeManager = require("ep_etherpad-lite/static/js/AttributeManager");
 var authorManager = require("../db/AuthorManager");
 var readOnlyManager = require("../db/ReadOnlyManager");
 var settings = require('../utils/Settings');
@@ -32,6 +33,7 @@ var plugins = require("ep_etherpad-lite/static/js/pluginfw/plugins.js");
 var log4js = require('log4js');
 var messageLogger = log4js.getLogger("message");
 var hooks = require("ep_etherpad-lite/static/js/pluginfw/hooks");
+var _ = require('underscore');
 
 /**
  * A associative array that translates a session to a pad
@@ -129,7 +131,11 @@ exports.handleDisconnect = function(client)
       //Go trough all user that are still on the pad, and send them the USER_LEAVE message
       for(i in pad2sessions[sessionPad])
       {
-        socketio.sockets.sockets[pad2sessions[sessionPad][i]].json.send(messageToTheOtherUsers);
+        var socket = socketio.sockets.sockets[pad2sessions[sessionPad][i]];
+        if(socket !== undefined){
+          socket.json.send(messageToTheOtherUsers);
+        }
+        
       }
     }); 
   }
@@ -172,32 +178,48 @@ exports.handleMessage = function(client, message)
   {
     handleClientReady(client, message);
   }
-  else if(message.type == "COLLABROOM" && 
-          message.data.type == "USER_CHANGES")
-  {
-    handleUserChanges(client, message);
-  }
-  else if(message.type == "COLLABROOM" && 
-          message.data.type == "USERINFO_UPDATE")
-  {
-    handleUserInfoUpdate(client, message);
-  }
-  else if(message.type == "COLLABROOM" && 
-          message.data.type == "CHAT_MESSAGE")
-  {
-    handleChatMessage(client, message);
-  }
-  else if(message.type == "COLLABROOM" && 
-          message.data.type == "CLIENT_MESSAGE" &&
-          message.data.payload.type == "suggestUserName")
-  {
-    handleSuggestUserName(client, message);
+  else if(message.type == "COLLABROOM" && typeof message.data == 'object'){
+    if (message.data.type == "USER_CHANGES")
+    {
+      handleUserChanges(client, message);
+    }
+    else if (message.data.type == "USERINFO_UPDATE")
+    {
+      handleUserInfoUpdate(client, message);
+    }
+    else if(message.data.type == "CHAT_MESSAGE")
+    {
+      handleChatMessage(client, message);
+    }
+    else if(message.data.type == "CLIENT_MESSAGE" &&
+            typeof message.data.payload == 'object' &&
+            message.data.payload.type == "suggestUserName")
+    {
+      handleSuggestUserName(client, message);
+    }
   }
   //if the message type is unknown, throw an exception
   else
   {
     messageLogger.warn("Dropped message, unknown Message Type " + message.type);
   }
+}
+
+/**
+ * Handles a save revision message
+ * @param client the client that send this message
+ * @param message the message from the client
+ */
+function handleSaveRevisionMessage(client, message){
+  var padId = session2pad[client.id];
+  var userId = sessioninfos[client.id].author;
+  
+  padManager.getPad(padId, function(err, pad)
+  {
+    if(ERR(err)) return;
+    
+    pad.addSavedRevision(pad.head, userId);
+  });
 }
 
 /**
@@ -369,7 +391,7 @@ function handleUserChanges(client, message)
   
   //get all Vars we need
   var baseRev = message.data.baseRev;
-  var wireApool = (AttributePoolFactory.createAttributePool()).fromJsonable(message.data.apool);
+  var wireApool = (new AttributePool()).fromJsonable(message.data.apool);
   var changeset = message.data.changeset;
       
   var r, apool, pad;
@@ -571,8 +593,12 @@ function _correctMarkersInPad(atext, apool) {
   var offset = 0;
   while (iter.hasNext()) {
     var op = iter.next();
-    var listValue = Changeset.opAttributeValue(op, 'list', apool);
-    if (listValue) {
+    
+    var hasMarker = _.find(AttributeManager.lineAttributes, function(attribute){
+      return Changeset.opAttributeValue(op, attribute, apool);
+    }) !== undefined;
+    
+    if (hasMarker) {
       for(var i=0;i<op.chars;i++) {
         if (offset > 0 && text.charAt(offset-1) != '\n') {
           badMarkers.push(offset);
@@ -744,9 +770,10 @@ function handleClientReady(client, message)
       {
         for(var i in pad2sessions[message.padId])
         {
-          if(sessioninfos[pad2sessions[message.padId][i]].author == author)
+          if(sessioninfos[pad2sessions[message.padId][i]] && sessioninfos[pad2sessions[message.padId][i]].author == author)
           {
-            socketio.sockets.sockets[pad2sessions[message.padId][i]].json.send({disconnect:"userdup"});
+            var socket = socketio.sockets.sockets[pad2sessions[message.padId][i]];
+            if(socket) socket.json.send({disconnect:"userdup"});
           }
         }
       }

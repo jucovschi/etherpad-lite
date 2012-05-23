@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-var padutils = require('ep_etherpad-lite/static/js/pad_utils').padutils;
+var padutils = require('./pad_utils').padutils;
 
 var myUserInfo = {};
 
@@ -120,7 +120,7 @@ var paduserlist = (function()
         nameHtml = '<input type="text" class="editempty newinput" value="unnamed" ' + (isNameEditable(data) ? '' : 'disabled="disabled" ') + '/>';
       }
 
-      return ['<td style="height:', height, 'px" class="usertdswatch"><div class="swatch" style="background:' + data.color + '">&nbsp;</div></td>', '<td style="height:', height, 'px" class="usertdname">', nameHtml, '</td>', '<td style="height:', height, 'px" class="usertdstatus">', padutils.escapeHtml(data.status), '</td>', '<td style="height:', height, 'px" class="activity">', padutils.escapeHtml(data.activity), '</td>'].join('');
+      return ['<td style="height:', height, 'px" class="usertdswatch"><div class="swatch" style="background:' + data.color + '">&nbsp;</div></td>', '<td style="height:', height, 'px" class="usertdname">', nameHtml, '</td>', '<td style="height:', height, 'px" class="activity">', padutils.escapeHtml(data.activity), '</td>'].join('');
     }
 
     function getRowHtml(id, innerHtml)
@@ -724,11 +724,11 @@ var paduserlist = (function()
       $("#myswatch").css({'background-color': myUserInfo.colorId});
       
       if ($.browser.msie && parseInt($.browser.version) <= 8) {
-        $("#usericon").css({'box-shadow': 'inset 0 0 30px ' + myUserInfo.colorId,'background-color': myUserInfo.colorId});
+        $("#usericon a").css({'box-shadow': 'inset 0 0 30px ' + myUserInfo.colorId,'background-color': myUserInfo.colorId});
       }
       else
       {
-        $("#usericon").css({'box-shadow': 'inset 0 0 30px ' + myUserInfo.colorId});
+        $("#usericon a").css({'box-shadow': 'inset 0 0 30px ' + myUserInfo.colorId});
       }
     }
   };
@@ -748,13 +748,14 @@ function closeColorPicker(accept)
     var newColor = $("#mycolorpickerpreview").css("background-color");
     var parts = newColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
     // parts now should be ["rgb(0, 70, 255", "0", "70", "255"]
-    delete (parts[0]);
-    for (var i = 1; i <= 3; ++i) {
-        parts[i] = parseInt(parts[i]).toString(16);
-        if (parts[i].length == 1) parts[i] = '0' + parts[i];
+    if (parts) {
+      delete (parts[0]);
+      for (var i = 1; i <= 3; ++i) {
+          parts[i] = parseInt(parts[i]).toString(16);
+          if (parts[i].length == 1) parts[i] = '0' + parts[i];
+      }
+      var newColor = "#" +parts.join(''); // "0070ff"
     }
-    var newColor = "#" +parts.join(''); // "0070ff"
-    
     myUserInfo.colorId = newColor;
     pad.notifyChangeColor(newColor);
     paduserlist.renderMyUserInfo();

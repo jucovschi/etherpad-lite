@@ -20,8 +20,8 @@
  * limitations under the License.
  */
 
-var AttribPool = require('ep_etherpad-lite/static/js/AttributePoolFactory').createAttributePool;
-var Changeset = require('ep_etherpad-lite/static/js/Changeset');
+var AttributePool = require('./AttributePool');
+var Changeset = require('./Changeset');
 
 function makeChangesetTracker(scheduler, apool, aceCallbacksProvider)
 {
@@ -83,7 +83,7 @@ function makeChangesetTracker(scheduler, apool, aceCallbacksProvider)
         baseAText = Changeset.cloneAText(atext);
         if (apoolJsonObj)
         {
-          var wireApool = (new AttribPool()).fromJsonable(apoolJsonObj);
+          var wireApool = (new AttributePool()).fromJsonable(apoolJsonObj);
           baseAText.attribs = Changeset.moveOpsToNewPool(baseAText.attribs, wireApool, apool);
         }
         submittedChangeset = null;
@@ -117,7 +117,7 @@ function makeChangesetTracker(scheduler, apool, aceCallbacksProvider)
 
         if (apoolJsonObj)
         {
-          var wireApool = (new AttribPool()).fromJsonable(apoolJsonObj);
+          var wireApool = (new AttributePool()).fromJsonable(apoolJsonObj);
           c = Changeset.moveOpsToNewPool(c, wireApool, apool);
         }
 

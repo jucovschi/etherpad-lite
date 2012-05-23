@@ -1,19 +1,64 @@
 var plugins = require("ep_etherpad-lite/static/js/pluginfw/plugins");
+var _;
 
 /* FIXME: Ugly hack, in the future, use same code for server & client */
 if (plugins.isClient) {
-  var async = require("ep_etherpad-lite/static/js/pluginfw/async");
+  var async = require("ep_etherpad-lite/static/js/pluginfw/async");  
+  var _ = require("ep_etherpad-lite/static/js/underscore");
 } else {
   var async = require("async");
+  var _ = require("underscore");
 }
+
+exports.bubbleExceptions = true
 
 var hookCallWrapper = function (hook, hook_name, args, cb) {
   if (cb === undefined) cb = function (x) { return x; };
-  try {
-    return hook.hook_fn(hook_name, args, cb);
-  } catch (ex) {
-    console.error([hook_name, hook.part.full_name, ex.stack || ex]);
+
+  // Normalize output to list for both sync and async cases
+  var normalize = function(x) {
+    if (x == undefined) return [];
+    return x;
   }
+  var normalizedhook = function () {
+    return normalize(hook.hook_fn(hook_name, args, function (x) {
+      return cb(normalize(x));
+    }));
+  }
+
+  if (exports.bubbleExceptions) {
+      return normalizedhook();
+  } else {
+    try {
+      return normalizedhook();
+    } catch (ex) {
+      console.error([hook_name, hook.part.full_name, ex.stack || ex]);
+    }
+  }
+}
+
+exports.syncMapFirst = function (lst, fn) {
+  var i;
+  var result;
+  for (i = 0; i < lst.length; i++) {
+    result = fn(lst[i])
+    if (result.length) return result;
+  }
+  return undefined;
+}
+
+exports.mapFirst = function (lst, fn, cb) {
+  var i = 0;
+
+  next = function () {
+    if (i >= lst.length) return cb(undefined);
+    fn(lst[i++], function (err, result) {
+      if (err) return cb(err);
+      if (result.length) return cb(null, result);
+      next();
+    });
+  }
+  next();
 }
 
 
@@ -33,33 +78,47 @@ exports.flatten = function (lst) {
 }
 
 exports.callAll = function (hook_name, args) {
+  if (!args) args = {};
   if (plugins.hooks[hook_name] === undefined) return [];
-  return exports.flatten(plugins.hooks[hook_name].map(function (hook) {
+  return _.flatten(_.map(plugins.hooks[hook_name], function (hook) {
     return hookCallWrapper(hook, hook_name, args);
-  }));
+  }), true);
 }
 
 exports.aCallAll = function (hook_name, args, cb) {
-  if (plugins.hooks[hook_name] === undefined) cb([]);
+  if (!args) args = {};
+  if (!cb) cb = function () {};
+  if (plugins.hooks[hook_name] === undefined) return cb(null, []);
   async.map(
     plugins.hooks[hook_name],
     function (hook, cb) {
       hookCallWrapper(hook, hook_name, args, function (res) { cb(null, res); });
     },
     function (err, res) {
-      cb(exports.flatten(res));
+        cb(null, _.flatten(res, true));
     }
   );
 }
 
 exports.callFirst = function (hook_name, args) {
+  if (!args) args = {};
   if (plugins.hooks[hook_name][0] === undefined) return [];
-  return exports.flatten(hookCallWrapper(plugins.hooks[hook_name][0], hook_name, args));
+  return exports.syncMapFirst(plugins.hooks[hook_name], function (hook) {
+    return hookCallWrapper(hook, hook_name, args);
+  });
 }
 
 exports.aCallFirst = function (hook_name, args, cb) {
-  if (plugins.hooks[hook_name][0] === undefined) cb([]);
-  hookCallWrapper(plugins.hooks[hook_name][0], hook_name, args, function (res) { cb(exports.flatten(res)); });
+  if (!args) args = {};
+  if (!cb) cb = function () {};
+  if (plugins.hooks[hook_name] === undefined) return cb(null, []);
+  exports.mapFirst(
+    plugins.hooks[hook_name],
+    function (hook, cb) {
+      hookCallWrapper(hook, hook_name, args, function (res) { cb(null, res); });
+    },
+    cb
+  );
 }
 
 exports.callAllStr = function(hook_name, args, sep, pre, post) {

@@ -19,40 +19,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+var editor, _, $, jQuery, plugins, Ace2Common;
 
-var Ace2Common = require('ep_etherpad-lite/static/js/ace2_common');
-var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
+Ace2Common = require('./ace2_common');
 
-// Extract useful method defined in the other module.
-var isNodeText = Ace2Common.isNodeText;
-var object = Ace2Common.object;
-var extend = Ace2Common.extend;
-var forEach = Ace2Common.forEach;
-var map = Ace2Common.map;
-var filter = Ace2Common.filter;
-var isArray = Ace2Common.isArray;
-var browser = Ace2Common.browser;
-var getAssoc = Ace2Common.getAssoc;
-var setAssoc = Ace2Common.setAssoc;
-var binarySearchInfinite = Ace2Common.binarySearchInfinite;
-var htmlPrettyEscape = Ace2Common.htmlPrettyEscape;
-var map = Ace2Common.map;
-var noop = Ace2Common.noop;
+plugins = require('ep_etherpad-lite/static/js/pluginfw/plugins');
+$ = jQuery = require('./rjquery').$;
+_ = require("./underscore");
 
-var makeChangesetTracker = require('ep_etherpad-lite/static/js/changesettracker').makeChangesetTracker;
-var colorutils = require('ep_etherpad-lite/static/js/colorutils').colorutils;
-var makeContentCollector = require('ep_etherpad-lite/static/js/contentcollector').makeContentCollector;
-var makeCSSManager = require('ep_etherpad-lite/static/js/cssmanager').makeCSSManager;
-var domline = require('ep_etherpad-lite/static/js/domline').domline;
-var AttribPool = require('ep_etherpad-lite/static/js/AttributePoolFactory').createAttributePool;
-var Changeset = require('ep_etherpad-lite/static/js/Changeset');
-var linestylefilter = require('ep_etherpad-lite/static/js/linestylefilter').linestylefilter;
-var newSkipList = require('ep_etherpad-lite/static/js/skiplist').newSkipList;
-var undoModule = require('ep_etherpad-lite/static/js/undomodule').undoModule;
-var makeVirtualLineView = require('ep_etherpad-lite/static/js/virtual_lines').makeVirtualLineView;
+var isNodeText = Ace2Common.isNodeText,
+  browser = Ace2Common.browser,
+  getAssoc = Ace2Common.getAssoc,
+  setAssoc = Ace2Common.setAssoc,
+  isTextNode = Ace2Common.isTextNode,
+  binarySearchInfinite = Ace2Common.binarySearchInfinite,
+  htmlPrettyEscape = Ace2Common.htmlPrettyEscape,
+  noop = Ace2Common.noop;
+  var hooks = require('./pluginfw/hooks');
+  
 
 function Ace2Inner(){
-  var DEBUG = true; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
+  
+  var makeChangesetTracker = require('./changesettracker').makeChangesetTracker;
+  var colorutils = require('./colorutils').colorutils;
+  var makeContentCollector = require('./contentcollector').makeContentCollector;
+  var makeCSSManager = require('./cssmanager').makeCSSManager;
+  var domline = require('./domline').domline;
+  var AttribPool = require('./AttributePool');
+  var Changeset = require('./Changeset');
+  var ChangesetUtils = require('./ChangesetUtils');
+  var linestylefilter = require('./linestylefilter').linestylefilter;
+  var SkipList = require('./skiplist');
+  var undoModule = require('./undomodule').undoModule;
+  var makeVirtualLineView = require('./virtual_lines').makeVirtualLineView;
+  var AttributeManager = require('./AttributeManager');
+  
+  var DEBUG = false; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
   // changed to false 
   var isSetUp = false;
 
@@ -70,7 +72,6 @@ function Ace2Inner(){
   var thisAuthor = '';
 
   var disposed = false;
-
   var editorInfo = parent.editorInfo;
 
   var iframe = window.frameElement;
@@ -81,21 +82,18 @@ function Ace2Inner(){
   var overlaysdiv = lineMetricsDiv.nextSibling;
   initLineNumbers();
 
-  var outsideKeyDown = function(evt)
-    {};
-  var outsideKeyPress = function(evt)
-    {
-      return true;
-      };
-  var outsideNotifyDirty = function()
-    {};
+  var outsideKeyDown = noop;
+  
+  var outsideKeyPress = function(){return true;};
+  
+  var outsideNotifyDirty = noop;
 
   // selFocusAtStart -- determines whether the selection extends "backwards", so that the focus
   // point (controlled with the arrow keys) is at the beginning; not supported in IE, though
   // native IE selections have that behavior (which we try not to interfere with).
   // Must be false if selection is collapsed!
   var rep = {
-    lines: newSkipList(),
+    lines: new SkipList(),
     selStart: null,
     selEnd: null,
     selFocusAtStart: false,
@@ -103,6 +101,7 @@ function Ace2Inner(){
     alines: [],
     apool: new AttribPool()
   };
+  
   // lines, alltext, alines, and DOM are set up in setup()
   if (undoModule.enabled)
   {
@@ -122,6 +121,7 @@ function Ace2Inner(){
       iframePadRight = 0;
 
   var console = (DEBUG && window.console);
+  var documentAttributeManager;
   
   if (!window.console)
   {
@@ -158,6 +158,7 @@ function Ace2Inner(){
 
   var textFace = 'monospace';
   var textSize = 12;
+  
 
   function textLineHeight()
   {
@@ -165,12 +166,10 @@ function Ace2Inner(){
   }
 
   var dynamicCSS = null;
-  var dynamicCSSTop = null;
 
   function initDynamicCSS()
   {
     dynamicCSS = makeCSSManager("dynamicsyntax");
-    dynamicCSSTop = makeCSSManager("dynamicsyntax", true);
   }
 
   var changesetTracker = makeChangesetTracker(scheduler, rep.apool, {
@@ -213,7 +212,6 @@ function Ace2Inner(){
       if (dynamicCSS)
       {
         dynamicCSS.removeSelectorStyle(getAuthorColorClassSelector(getAuthorClassName(author)));
-        dynamicCSSTop.removeSelectorStyle(getAuthorColorClassSelector(getAuthorClassName(author)));
       }
     }
     else
@@ -231,23 +229,18 @@ function Ace2Inner(){
           
           var authorStyle = dynamicCSS.selectorStyle(getAuthorColorClassSelector(
           getAuthorClassName(author)));
-          var authorStyleTop = dynamicCSSTop.selectorStyle(getAuthorColorClassSelector(
-          getAuthorClassName(author)));
           var anchorStyle = dynamicCSS.selectorStyle(getAuthorColorClassSelector(
           getAuthorClassName(author))+' > a')
           
           // author color
           authorStyle.backgroundColor = bgcolor;
-          authorStyleTop.backgroundColor = bgcolor;
           
           // text contrast
           if(colorutils.luminosity(colorutils.css2triple(bgcolor)) < 0.5)
           {
             authorStyle.color = '#ffffff';
-            authorStyleTop.color = '#ffffff';
           }else{
             authorStyle.color = null;
-            authorStyleTop.color = null;
           }
           
           // anchor text contrast
@@ -685,7 +678,7 @@ function Ace2Inner(){
     }
     else
     {
-      lines = map(text.split('\n'), textify);
+      lines = _.map(text.split('\n'), textify);
     }
     var newText = "\n";
     if (lines.length > 0)
@@ -847,7 +840,7 @@ function Ace2Inner(){
     var cmdArgs = Array.prototype.slice.call(arguments, 1);
     if (CMDS[cmd])
     {
-      inCallStack(cmd, function()
+      inCallStackIfNecessary(cmd, function()
       {
         fastIncorp(9);
         CMDS[cmd].apply(CMDS, cmdArgs);
@@ -857,7 +850,7 @@ function Ace2Inner(){
 
   function replaceRange(start, end, text)
   {
-    inCallStack('replaceRange', function()
+    inCallStackIfNecessary('replaceRange', function()
     {
       fastIncorp(9);
       performDocumentReplaceRange(start, end, text);
@@ -884,9 +877,7 @@ function Ace2Inner(){
     {
       return fn(editorInfo);
     };
-        
-        
-        
+    
     if (normalize !== undefined)
     {
       var wrapper1 = wrapper;
@@ -934,7 +925,10 @@ function Ace2Inner(){
       },
       grayedout: setClassPresenceNamed(outerWin.document.body, "grayedout"),
       dmesg: function(){ dmesg = window.dmesg = value; },
-      userauthor: function(value){ thisAuthor = String(value); },
+      userauthor: function(value){ 
+        thisAuthor = String(value);
+        documentAttributeManager.author = thisAuthor;
+      },
       styled: setStyled,
       textface: setTextFace,
       textsize: setTextSize,
@@ -1160,7 +1154,7 @@ function Ace2Inner(){
       return;
     }
 
-    inCallStack("idleWorkTimer", function()
+    inCallStackIfNecessary("idleWorkTimer", function()
     {
 
       var isTimeUp = newTimeLimit(250);
@@ -1623,8 +1617,7 @@ function Ace2Inner(){
         }
         //var fragment = magicdom.wrapDom(document.createDocumentFragment());
         domInsertsNeeded.push([nodeToAddAfter, lineNodeInfos]);
-        forEach(dirtyNodes, function(n)
-        {
+        _.each(dirtyNodes,function(n){
           toDeleteAtEnd.push(n);
         });
         var spliceHints = {};
@@ -1646,7 +1639,7 @@ function Ace2Inner(){
 
     // update the representation
     p.mark("splice");
-    forEach(splicesToDo, function(splice)
+    _.each(splicesToDo, function(splice)
     {
       doIncorpLineSplice(splice[0], splice[1], splice[2], splice[3], splice[4]);
     });
@@ -1656,14 +1649,14 @@ function Ace2Inner(){
     //var isTimeUp = newTimeLimit(100);
     // do DOM inserts
     p.mark("insert");
-    forEach(domInsertsNeeded, function(ins)
+    _.each(domInsertsNeeded,function(ins)
     {
       insertDomLines(ins[0], ins[1], isTimeUp);
     });
 
     p.mark("del");
     // delete old dom nodes
-    forEach(toDeleteAtEnd, function(n)
+    _.each(toDeleteAtEnd,function(n)
     {
       //var id = n.uniqueId();
       // parent of n may not be "root" in IE due to non-tree-shaped DOM (wtf)
@@ -1773,7 +1766,7 @@ function Ace2Inner(){
     var charEnd = rep.lines.offsetOfEntry(endEntry) + endEntry.width;
 
     //rep.lexer.lexCharRange([charStart, charEnd], isTimeUp);
-    forEach(infoStructs, function(info)
+    _.each(infoStructs, function(info)
     {
       var p2 = PROFILER("insertLine", false);
       var node = info.node;
@@ -1869,55 +1862,6 @@ function Ace2Inner(){
       performSelectionChange([lineNum, theIndent.length], [lineNum, theIndent.length]);
     }
   }
-
-
-  function setupMozillaCaretHack(lineNum)
-  {
-    // This is really ugly, but by god, it works!
-    // Fixes annoying Firefox caret artifact (observed in 2.0.0.12
-    // and unfixed in Firefox 2 as of now) where mutating the DOM
-    // and then moving the caret to the beginning of a line causes
-    // an image of the caret to be XORed at the top of the iframe.
-    // The previous solution involved remembering to set the selection
-    // later, in response to the next event in the queue, which was hugely
-    // annoying.
-    // This solution: add a space character (0x20) to the beginning of the line.
-    // After setting the selection, remove the space.
-    var lineNode = rep.lines.atIndex(lineNum).lineNode;
-
-    var fc = lineNode.firstChild;
-    while (isBlockElement(fc) && fc.firstChild)
-    {
-      fc = fc.firstChild;
-    }
-    var textNode;
-    if (isNodeText(fc))
-    {
-      fc.nodeValue = " " + fc.nodeValue;
-      textNode = fc;
-    }
-    else
-    {
-      textNode = doc.createTextNode(" ");
-      fc.parentNode.insertBefore(textNode, fc);
-    }
-    markNodeClean(lineNode);
-    return {
-      unhack: function()
-      {
-        if (textNode.nodeValue == " ")
-        {
-          textNode.parentNode.removeChild(textNode);
-        }
-        else
-        {
-          textNode.nodeValue = textNode.nodeValue.substring(1);
-        }
-        markNodeClean(lineNode);
-      }
-    };
-  }
-
 
   function getPointForLineAndChar(lineAndChar)
   {
@@ -2049,6 +1993,7 @@ function Ace2Inner(){
       return [lineNum, col];
     }
   }
+  editorInfo.ace_getLineAndCharForPoint = getLineAndCharForPoint;
 
   function createDomLineEntry(lineString)
   {
@@ -2083,10 +2028,8 @@ function Ace2Inner(){
     var linesMutatee = {
       splice: function(start, numRemoved, newLinesVA)
       {
-        domAndRepSplice(start, numRemoved, map(Array.prototype.slice.call(arguments, 2), function(s)
-        {
-          return s.slice(0, -1);
-        }), null);
+        var args = Array.prototype.slice.call(arguments, 2);
+        domAndRepSplice(start, numRemoved, _.map(args, function(s){ return s.slice(0, -1); }), null);
       },
       get: function(i)
       {
@@ -2098,7 +2041,7 @@ function Ace2Inner(){
       },
       slice_notused: function(start, end)
       {
-        return map(rep.lines.slice(start, end), function(e)
+        return _.map(rep.lines.slice(start, end), function(e)
         {
           return e.text + '\n';
         });
@@ -2132,7 +2075,7 @@ function Ace2Inner(){
         }
       }
 
-      var lineEntries = map(newLineStrings, createDomLineEntry);
+      var lineEntries = _.map(newLineStrings, createDomLineEntry);
 
       doRepLineSplice(startLine, deleteCount, lineEntries);
 
@@ -2143,12 +2086,12 @@ function Ace2Inner(){
       }
       else nodeToAddAfter = null;
 
-      insertDomLines(nodeToAddAfter, map(lineEntries, function(entry)
+      insertDomLines(nodeToAddAfter, _.map(lineEntries, function(entry)
       {
         return entry.domInfo;
       }), isTimeUp);
 
-      forEach(keysToDelete, function(k)
+      _.each(keysToDelete, function(k)
       {
         var n = doc.getElementById(k);
         n.parentNode.removeChild(n);
@@ -2254,6 +2197,9 @@ function Ace2Inner(){
 
   }
 
+  /*
+    Converts the position of a char (index in String) into a [row, col] tuple
+  */
   function lineAndColumnFromChar(x)
   {
     var lineEntry = rep.lines.atOffset(x);
@@ -2308,8 +2254,8 @@ function Ace2Inner(){
     //           CCCC\n
     // end[0]:   <CCC end[1] CCC>-------\n
     var builder = Changeset.builder(rep.lines.totalWidth());
-    buildKeepToStartOfRange(builder, start);
-    buildRemoveRange(builder, start, end);
+    ChangesetUtils.buildKeepToStartOfRange(rep, builder, start);
+    ChangesetUtils.buildRemoveRange(rep, builder, start, end);
     builder.insert(newText, [
       ['author', thisAuthor]
     ], rep.apool);
@@ -2320,68 +2266,17 @@ function Ace2Inner(){
 
   function performDocumentApplyAttributesToCharRange(start, end, attribs)
   {
-    if (end >= rep.alltext.length)
-    {
-      end = rep.alltext.length - 1;
-    }
-    performDocumentApplyAttributesToRange(lineAndColumnFromChar(start), lineAndColumnFromChar(end), attribs);
+    end = Math.min(end, rep.alltext.length - 1);
+    documentAttributeManager.setAttributesOnRange(lineAndColumnFromChar(start), lineAndColumnFromChar(end), attribs);
   }
   editorInfo.ace_performDocumentApplyAttributesToCharRange = performDocumentApplyAttributesToCharRange;
-
-  function performDocumentApplyAttributesToRange(start, end, attribs)
-  {
-    var builder = Changeset.builder(rep.lines.totalWidth());
-    buildKeepToStartOfRange(builder, start);
-    buildKeepRange(builder, start, end, attribs, rep.apool);
-    var cs = builder.toString();
-    performDocumentApplyChangeset(cs);
-  }
-
-  function buildKeepToStartOfRange(builder, start)
-  {
-    var startLineOffset = rep.lines.offsetOfIndex(start[0]);
-
-    builder.keep(startLineOffset, start[0]);
-    builder.keep(start[1]);
-  }
-
-  function buildRemoveRange(builder, start, end)
-  {
-    var startLineOffset = rep.lines.offsetOfIndex(start[0]);
-    var endLineOffset = rep.lines.offsetOfIndex(end[0]);
-
-    if (end[0] > start[0])
-    {
-      builder.remove(endLineOffset - startLineOffset - start[1], end[0] - start[0]);
-      builder.remove(end[1]);
-    }
-    else
-    {
-      builder.remove(end[1] - start[1]);
-    }
-  }
-
-  function buildKeepRange(builder, start, end, attribs, pool)
-  {
-    var startLineOffset = rep.lines.offsetOfIndex(start[0]);
-    var endLineOffset = rep.lines.offsetOfIndex(end[0]);
-
-    if (end[0] > start[0])
-    {
-      builder.keep(endLineOffset - startLineOffset - start[1], end[0] - start[0], attribs, pool);
-      builder.keep(end[1], 0, attribs, pool);
-    }
-    else
-    {
-      builder.keep(end[1] - start[1], 0, attribs, pool);
-    }
-  }
-
+  
+  
   function setAttributeOnSelection(attributeName, attributeValue)
   {
     if (!(rep.selStart && rep.selEnd)) return;
 
-    performDocumentApplyAttributesToRange(rep.selStart, rep.selEnd, [
+    documentAttributeManager.setAttributesOnRange(rep.selStart, rep.selEnd, [
       [attributeName, attributeValue]
     ]);
   }
@@ -2442,13 +2337,13 @@ function Ace2Inner(){
 
     if (selectionAllHasIt)
     {
-      performDocumentApplyAttributesToRange(rep.selStart, rep.selEnd, [
+      documentAttributeManager.setAttributesOnRange(rep.selStart, rep.selEnd, [
         [attributeName, '']
       ]);
     }
     else
     {
-      performDocumentApplyAttributesToRange(rep.selStart, rep.selEnd, [
+      documentAttributeManager.setAttributesOnRange(rep.selStart, rep.selEnd, [
         [attributeName, 'true']
       ]);
     }
@@ -2468,7 +2363,7 @@ function Ace2Inner(){
   function doRepLineSplice(startLine, deleteCount, newLineEntries)
   {
 
-    forEach(newLineEntries, function(entry)
+    _.each(newLineEntries, function(entry)
     {
       entry.width = entry.text.length + 1;
     });
@@ -2483,7 +2378,7 @@ function Ace2Inner(){
     currentCallStack.repChanged = true;
     var newRegionEnd = rep.lines.offsetOfIndex(startLine + newLineEntries.length);
 
-    var newText = map(newLineEntries, function(e)
+    var newText = _.map(newLineEntries, function(e)
     {
       return e.text + '\n';
     }).join('');
@@ -2513,7 +2408,7 @@ function Ace2Inner(){
       selEndHintChar = rep.lines.offsetOfIndex(hints.selEnd[0]) + hints.selEnd[1] - oldRegionStart;
     }
 
-    var newText = map(newLineEntries, function(e)
+    var newText = _.map(newLineEntries, function(e)
     {
       return e.text + '\n';
     }).join('');
@@ -2861,6 +2756,7 @@ function Ace2Inner(){
       currentCallStack.selectionAffected = true;
     }
   }
+  editorInfo.ace_performSelectionChange = performSelectionChange;
 
   // Change the abstract representation of the document to have a different selection.
   // Should not rely on the line representation.  Should not affect the DOM.
@@ -2968,6 +2864,10 @@ function Ace2Inner(){
     "ul": 1
   };
 
+  _.each(hooks.callAll('aceRegisterBlockElements'), function(element){
+      _blockElems[element] = 1;
+  });
+
   function isBlockElement(n)
   {
     return !!_blockElems[(n.tagName || "").toLowerCase()];
@@ -3053,7 +2953,7 @@ function Ace2Inner(){
     {
       // returns index of cleanRange containing i, or -1 if none
       var answer = -1;
-      forEach(cleanRanges, function(r, idx)
+      _.each(cleanRanges ,function(r, idx)
       {
         if (i >= r[1]) return false; // keep looking
         if (i < r[0]) return true; // not found, stop looking
@@ -3300,7 +3200,7 @@ function Ace2Inner(){
 
   function handleClick(evt)
   {
-    inCallStack("handleClick", function()
+    inCallStackIfNecessary("handleClick", function()
     {
       idleWorkTimer.atMost(200);
     });
@@ -3346,6 +3246,7 @@ function Ace2Inner(){
     {
       return;
     }
+    
     var lineNum = rep.selStart[0];
     var listType = getLineListType(lineNum);
 
@@ -3417,11 +3318,9 @@ function Ace2Inner(){
       }
     }
 
-    if (mods.length > 0)
-    {
-      setLineListTypes(mods);
-    }
-
+    _.each(mods, function(mod){
+      setLineListType(mod[0], mod[1]);
+    });
     return true;
   }
   editorInfo.ace_doIndentOutdent = doIndentOutdent;
@@ -3471,6 +3370,9 @@ function Ace2Inner(){
             var thisLineListType = getLineListType(theLine);
             var prevLineEntry = (theLine > 0 && rep.lines.atIndex(theLine - 1));
             var prevLineBlank = (prevLineEntry && prevLineEntry.text.length == prevLineEntry.lineMarker);
+            
+            var thisLineHasMarker = documentAttributeManager.lineHasMarker(theLine);
+            
             if (thisLineListType)
             {
               // this line is a list
@@ -3484,6 +3386,9 @@ function Ace2Inner(){
                 // delistify
                 performDocumentReplaceRange([theLine, 0], [theLine, lineEntry.lineMarker], '');
               }
+            }else if (thisLineHasMarker && prevLineEntry){
+              // If the line has any attributes assigned, remove them by removing the marker '*'
+              performDocumentReplaceRange([theLine -1 , prevLineEntry.text.length], [theLine, lineEntry.lineMarker], '');
             }
             else if (theLine > 0)
             {
@@ -3623,7 +3528,7 @@ function Ace2Inner(){
 
     var stopped = false;
 
-    inCallStack("handleKeyEvent", function()
+    inCallStackIfNecessary("handleKeyEvent", function()
     {
 
       if (type == "keypress" || (isTypeForSpecialKey && keyCode == 13 /*return*/ ))
@@ -3836,44 +3741,17 @@ function Ace2Inner(){
       return;
     }
 
-    var mozillaCaretHack = (false && browser.mozilla && selStart && selEnd && selStart[0] == selEnd[0] && selStart[1] == rep.lines.atIndex(selStart[0]).lineMarker && selEnd[1] == rep.lines.atIndex(selEnd[0]).lineMarker && setupMozillaCaretHack(selStart[0]));
-
     var selection = {};
 
     var ss = [selStart[0], selStart[1]];
-    if (mozillaCaretHack) ss[1] += 1;
     selection.startPoint = getPointForLineAndChar(ss);
 
     var se = [selEnd[0], selEnd[1]];
-    if (mozillaCaretHack) se[1] += 1;
     selection.endPoint = getPointForLineAndChar(se);
 
     selection.focusAtStart = !! rep.selFocusAtStart;
 
     setSelection(selection);
-
-    if (mozillaCaretHack)
-    {
-      mozillaCaretHack.unhack();
-    }
-  }
-
-  function getRepHTML()
-  {
-    return map(rep.lines.slice(), function(entry)
-    {
-      var text = entry.text;
-      var content;
-      if (text.length === 0)
-      {
-        content = '<span style="color: #aaa">--</span>';
-      }
-      else
-      {
-        content = htmlPrettyEscape(text);
-      }
-      return '<div><code>' + content + '</div></code>';
-    }).join('');
   }
 
   function nodeMaxIndex(nd)
@@ -4546,7 +4424,7 @@ function Ace2Inner(){
 
     enforceEditability();
 
-    addClass(sideDiv, 'sidedivdelayed');
+    $(sideDiv).addClass('sidedivdelayed');
   }
 
   function getScrollXY()
@@ -4599,13 +4477,11 @@ function Ace2Inner(){
 
   function teardown()
   {
-    forEach(_teardownActions, function(a)
+    _.each(_teardownActions, function(a)
     {
       a();
     });
   }
-
-  bindEventHandler(window, "load", setup);
 
   function setDesignMode(newVal)
   {
@@ -4683,24 +4559,24 @@ function Ace2Inner(){
 
   function bindTheEventHandlers()
   {
-    bindEventHandler(document, "keydown", handleKeyEvent);
-    bindEventHandler(document, "keypress", handleKeyEvent);
-    bindEventHandler(document, "keyup", handleKeyEvent);
-    bindEventHandler(document, "click", handleClick);
-    bindEventHandler(root, "blur", handleBlur);
+    $(document).on("keydown", handleKeyEvent);
+    $(document).on("keypress", handleKeyEvent);
+    $(document).on("keyup", handleKeyEvent);
+    $(document).on("click", handleClick);
+    $(root).on("blur", handleBlur);
 
     var body = doc.getElementById("innerdocbody");
     bindEventHandler(body, "contextmenu", handleContextMenu);
 
     if (browser.msie)
     {
-      bindEventHandler(document, "click", handleIEOuterClick);
+      $(document).on("click", handleIEOuterClick);
     }
-    if (browser.msie) bindEventHandler(root, "paste", handleIEPaste);
+    if (browser.msie) $(root).on("paste", handleIEPaste);
     if ((!browser.msie) && document.documentElement)
     {
-      bindEventHandler(document.documentElement, "compositionstart", handleCompositionEvent);
-      bindEventHandler(document.documentElement, "compositionend", handleCompositionEvent);
+      $(document.documentElement).on("compositionstart", handleCompositionEvent);
+      $(document.documentElement).on("compositionend", handleCompositionEvent);
     }
   }
 
@@ -4716,7 +4592,7 @@ function Ace2Inner(){
     }
 
     // click below the body
-    inCallStack("handleOuterClick", function()
+    inCallStackIfNecessary("handleOuterClick", function()
     {
       // put caret at bottom of doc
       fastIncorp(11);
@@ -4747,49 +4623,16 @@ function Ace2Inner(){
     elem.className = array.join(' ');
   }
 
-  function addClass(elem, className)
-  {
-    var seen = false;
-    var cc = getClassArray(elem, function(c)
-    {
-      if (c == className) seen = true;
-      return true;
-    });
-    if (!seen)
-    {
-      cc.push(className);
-      setClassArray(elem, cc);
-    }
-  }
-
-  function removeClass(elem, className)
-  {
-    var seen = false;
-    var cc = getClassArray(elem, function(c)
-    {
-      if (c == className)
-      {
-        seen = true;
-        return false;
-      }
-      return true;
-    });
-    if (seen)
-    {
-      setClassArray(elem, cc);
-    }
-  }
-
   function setClassPresence(elem, className, present)
   {
-    if (present) addClass(elem, className);
-    else removeClass(elem, className);
+    if (present) $(elem).addClass(className);
+    else $(elem).removeClass(className);
   }
 
   function setup()
   {
     doc = document; // defined as a var in scope outside
-    inCallStack("setup", function()
+    inCallStackIfNecessary("setup", function()
     {
       var body = doc.getElementById("innerdocbody");
       root = body; // defined as a var in scope outside
@@ -4848,32 +4691,6 @@ function Ace2Inner(){
       // events, though typing still affects it(!).
       setSelection(null);
     }
-  }
-
-  function bindEventHandler(target, type, func)
-  {
-    var handler;
-    if ((typeof func._wrapper) != "function")
-    {
-      func._wrapper = function(event)
-      {
-        func(fixEvent(event || window.event || {}));
-      }
-    }
-    var handler = func._wrapper;
-    if (target.addEventListener) target.addEventListener(type, handler, false);
-    else target.attachEvent("on" + type, handler);
-    _teardownActions.push(function()
-    {
-      unbindEventHandler(target, type, func);
-    });
-  }
-
-  function unbindEventHandler(target, type, func)
-  {
-    var handler = func._wrapper;
-    if (target.removeEventListener) target.removeEventListener(type, handler, false);
-    else target.detachEvent("on" + type, handler);
   }
 
   function getSelectionPointX(point)
@@ -5009,27 +4826,30 @@ function Ace2Inner(){
       }
     }
   }
-
+  
+  var listAttributeName = 'list';
+  
   function getLineListType(lineNum)
   {
-    // get "list" attribute of first char of line
-    var aline = rep.alines[lineNum];
-    if (aline)
-    {
-      var opIter = Changeset.opIterator(aline);
-      if (opIter.hasNext())
-      {
-        return Changeset.opAttributeValue(opIter.next(), 'list', rep.apool) || '';
-      }
-    }
-    return '';
+    return documentAttributeManager.getAttributeOnLine(lineNum, listAttributeName)
   }
 
   function setLineListType(lineNum, listType)
   {
-    setLineListTypes([
-      [lineNum, listType]
-    ]);
+    if(listType == ''){
+      documentAttributeManager.removeAttributeOnLine(lineNum, listAttributeName);
+    }else{
+      documentAttributeManager.setAttributeOnLine(lineNum, listAttributeName, listType);
+    }
+    
+    //if the list has been removed, it is necessary to renumber
+    //starting from the *next* line because the list may have been
+    //separated. If it returns null, it means that the list was not cut, try
+    //from the current one.
+    if(renumberList(lineNum+1)==null)
+    {
+      renumberList(lineNum);
+    }
   }
   
   function renumberList(lineNum){
@@ -5076,8 +4896,8 @@ function Ace2Inner(){
         }
         else if(curLevel == level)
         {
-          buildKeepRange(builder, loc, (loc = [line, 0]));
-          buildKeepRange(builder, loc, (loc = [line, 1]), [
+          ChangesetUtils.buildKeepRange(rep, builder, loc, (loc = [line, 0]));
+          ChangesetUtils.buildKeepRange(rep, builder, loc, (loc = [line, 1]), [
             ['start', position]
           ], rep.apool);
           
@@ -5108,62 +4928,6 @@ function Ace2Inner(){
     
   }
   
-  function setLineListTypes(lineNumTypePairsInOrder)
-  {
-    var loc = [0, 0];
-    var builder = Changeset.builder(rep.lines.totalWidth());
-    for (var i = 0; i < lineNumTypePairsInOrder.length; i++)
-    {
-      var pair = lineNumTypePairsInOrder[i];
-      var lineNum = pair[0];
-      var listType = pair[1];
-      buildKeepRange(builder, loc, (loc = [lineNum, 0]));
-      if (getLineListType(lineNum))
-      {
-        // already a line marker
-        if (listType)
-        {
-          // make different list type
-          buildKeepRange(builder, loc, (loc = [lineNum, 1]), [
-            ['list', listType]
-          ], rep.apool);
-        }
-        else
-        {
-          // remove list marker
-          buildRemoveRange(builder, loc, (loc = [lineNum, 1]));
-        }
-      }
-      else
-      {
-        // currently no line marker
-        if (listType)
-        {
-          // add a line marker
-          builder.insert('*', [
-            ['author', thisAuthor],
-            ['insertorder', 'first'],
-            ['list', listType]
-          ], rep.apool);
-        }
-      }
-    }
-
-    var cs = builder.toString();
-    if (!Changeset.isIdentity(cs))
-    {
-      performDocumentApplyChangeset(cs);
-    }
-    
-    //if the list has been removed, it is necessary to renumber
-    //starting from the *next* line because the list may have been
-    //separated. If it returns null, it means that the list was not cut, try
-    //from the current one.
-    if(renumberList(lineNum+1)==null)
-    {
-      renumberList(lineNum);
-    }
-  }
 
   function doInsertList(type)
   {
@@ -5201,7 +4965,10 @@ function Ace2Inner(){
       var t = getLineListType(n);
       mods.push([n, allLinesAreList ? 'indent' + level : (t ? type + level : type + '1')]);
     }
-    setLineListTypes(mods);
+    
+    _.each(mods, function(mod){
+      setLineListType(mod[0], mod[1]);
+    });
   }
   
   function doInsertUnorderedList(){
@@ -5537,67 +5304,7 @@ function Ace2Inner(){
       }
     };
   })());
-
-
-  // stolen from jquery-1.2.1
-
-
-  function fixEvent(event)
-  {
-    // store a copy of the original event object
-    // and clone to set read-only properties
-    var originalEvent = event;
-    event = extend(
-    {}, originalEvent);
-
-    // add preventDefault and stopPropagation since
-    // they will not work on the clone
-    event.preventDefault = function()
-    {
-      // if preventDefault exists run it on the original event
-      if (originalEvent.preventDefault) originalEvent.preventDefault();
-      // otherwise set the returnValue property of the original event to false (IE)
-      originalEvent.returnValue = false;
-    };
-    event.stopPropagation = function()
-    {
-      // if stopPropagation exists run it on the original event
-      if (originalEvent.stopPropagation) originalEvent.stopPropagation();
-      // otherwise set the cancelBubble property of the original event to true (IE)
-      originalEvent.cancelBubble = true;
-    };
-
-    // Fix target property, if necessary
-    if (!event.target && event.srcElement) event.target = event.srcElement;
-
-    // check if target is a textnode (safari)
-    if (browser.safari && event.target.nodeType == 3) event.target = originalEvent.target.parentNode;
-
-    // Add relatedTarget, if necessary
-    if (!event.relatedTarget && event.fromElement) event.relatedTarget = event.fromElement == event.target ? event.toElement : event.fromElement;
-
-    // Calculate pageX/Y if missing and clientX/Y available
-    if (event.pageX == null && event.clientX != null)
-    {
-      var e = document.documentElement,
-          b = document.body;
-      event.pageX = event.clientX + (e && e.scrollLeft || b.scrollLeft || 0);
-      event.pageY = event.clientY + (e && e.scrollTop || b.scrollTop || 0);
-    }
-
-    // Add which for key events
-    if (!event.which && (event.charCode || event.keyCode)) event.which = event.charCode || event.keyCode;
-
-    // Add metaKey to non-Mac browsers (use ctrl for PC's and Meta for Macs)
-    if (!event.metaKey && event.ctrlKey) event.metaKey = event.ctrlKey;
-
-    // Add which for click: 1 == left; 2 == middle; 3 == right
-    // Note: button is not normalized, so don't use it
-    if (!event.which && event.button) event.which = (event.button & 1 ? 1 : (event.button & 2 ? 3 : (event.button & 4 ? 2 : 0)));
-
-    return event;
-  }
-
+  
   var lineNumbersShown;
   var sideDivInner;
 
@@ -5681,7 +5388,70 @@ function Ace2Inner(){
       }
     }
   }
+  
+  
+  // Init documentAttributeManager
+  documentAttributeManager = new AttributeManager(rep, performDocumentApplyChangeset);
+  editorInfo.ace_performDocumentApplyAttributesToRange = function () {
+    return documentAttributeManager.setAttributesOnRange.apply(documentAttributeManager, arguments);
+  };
+
+  $(document).ready(function(){
+    doc = document; // defined as a var in scope outside
+    inCallStack("setup", function()
+    {
+      var body = doc.getElementById("innerdocbody");
+      root = body; // defined as a var in scope outside
+      if (browser.mozilla) $(root).addClass("mozilla");
+      if (browser.safari) $(root).addClass("safari");
+      if (browser.msie) $(root).addClass("msie");
+      if (browser.msie)
+      {
+        // cache CSS background images
+        try
+        {
+          doc.execCommand("BackgroundImageCache", false, true);
+        }
+        catch (e)
+        { /* throws an error in some IE 6 but not others! */
+        }
+      }
+      setClassPresence(root, "authorColors", true);
+      setClassPresence(root, "doesWrap", doesWrap);
+
+      initDynamicCSS();
+
+      enforceEditability();
+
+      // set up dom and rep
+      while (root.firstChild) root.removeChild(root.firstChild);
+      var oneEntry = createDomLineEntry("");
+      doRepLineSplice(0, rep.lines.length(), [oneEntry]);
+      insertDomLines(null, [oneEntry.domInfo], null);
+      rep.alines = Changeset.splitAttributionLines(
+      Changeset.makeAttribution("\n"), "\n");
+
+      bindTheEventHandlers();
+
+    });
+    
+    hooks.callAll('aceInitialized', {
+      editorInfo: editorInfo,
+      rep: rep,
+      documentAttributeManager: documentAttributeManager
+    });
+    
+    scheduler.setTimeout(function()
+    {
+      parent.readyFunc(); // defined in code that sets up the inner iframe
+    }, 0);
+
+    isSetUp = true;
+  });
 
 }
 
-exports.editor = new Ace2Inner();
+// Ensure that plugins are loaded before initializing the editor
+plugins.ensure(function () {
+  var editor = new Ace2Inner();
+});

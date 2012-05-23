@@ -20,8 +20,8 @@
  * limitations under the License.
  */
 
-var padcookie = require('ep_etherpad-lite/static/js/pad_cookie').padcookie;
-var padutils = require('ep_etherpad-lite/static/js/pad_utils').padutils;
+var padcookie = require('./pad_cookie').padcookie;
+var padutils = require('./pad_utils').padutils;
 
 var padeditor = (function()
 {
@@ -34,7 +34,7 @@ var padeditor = (function()
     viewZoom: 100,
     init: function(readyFunc, initialViewOptions, _pad)
     {
-      Ace2Editor = require('ep_etherpad-lite/static/js/ace').Ace2Editor;
+      Ace2Editor = require('./ace').Ace2Editor;
       pad = _pad;
       settings = pad.settings;
 
@@ -58,7 +58,6 @@ var padeditor = (function()
       self.setViewOptions(initialViewOptions);
 
       // view bar
-      self.initViewZoom();
       $("#viewbarcontents").show();
     },
     initViewOptions: function()
@@ -87,8 +86,6 @@ var padeditor = (function()
         return defaultValue;
       }
 
-      self.ace.setProperty("showsauthorcolors", !settings.noColors);
-
       self.ace.setProperty("rtlIsTrue", settings.rtlIsTrue);
 
       var v;
@@ -100,40 +97,13 @@ var padeditor = (function()
       v = getOption('showAuthorColors', true);
       self.ace.setProperty("showsauthorcolors", v);
       padutils.setCheckbox($("#options-colorscheck"), v);
+      // Override from parameters if true
+      if (settings.noColors !== false)
+        self.ace.setProperty("showsauthorcolors", !settings.noColors);
 
       v = getOption('useMonospaceFont', false);
       self.ace.setProperty("textface", (v ? "monospace" : "Arial, sans-serif"));
       $("#viewfontmenu").val(v ? "monospace" : "normal");
-    },
-    initViewZoom: function()
-    {
-      var viewZoom = Number(padcookie.getPref('viewZoom'));
-      if ((!viewZoom) || isNaN(viewZoom))
-      {
-        viewZoom = 100;
-      }
-      self.setViewZoom(viewZoom);
-      $("#viewzoommenu").change(function(evt)
-      {
-        // strip initial 'z' from val
-        self.setViewZoom(Number($("#viewzoommenu").val().substring(1)));
-      });
-    },
-    setViewZoom: function(percent)
-    {
-      if (!(percent >= 50 && percent <= 1000))
-      {
-        // percent is out of sane range or NaN (which fails comparisons)
-        return;
-      }
-
-      self.viewZoom = percent;
-      $("#viewzoommenu").val('z' + percent);
-
-      var baseSize = 13;
-      self.ace.setProperty('textsize', Math.round(baseSize * self.viewZoom / 100));
-
-      padcookie.setPref('viewZoom', percent);
     },
     dispose: function()
     {

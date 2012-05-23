@@ -26,29 +26,71 @@ var socket;
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('ep_etherpad-lite/static/js/jquery');
-require('ep_etherpad-lite/static/js/farbtastic');
-require('ep_etherpad-lite/static/js/excanvas');
-JSON = require('ep_etherpad-lite/static/js/json2');
-require('ep_etherpad-lite/static/js/undo-xpopup');
-require('ep_etherpad-lite/static/js/prefixfree');
+require('./jquery');
+require('./farbtastic');
+require('./excanvas');
+JSON = require('./json2');
 
-var chat = require('ep_etherpad-lite/static/js/chat').chat;
-var getCollabClient = require('ep_etherpad-lite/static/js/collab_client').getCollabClient;
-var padconnectionstatus = require('ep_etherpad-lite/static/js/pad_connectionstatus').padconnectionstatus;
-var padcookie = require('ep_etherpad-lite/static/js/pad_cookie').padcookie;
-var paddocbar = require('ep_etherpad-lite/static/js/pad_docbar').paddocbar;
-var padeditbar = require('ep_etherpad-lite/static/js/pad_editbar').padeditbar;
-var padeditor = require('ep_etherpad-lite/static/js/pad_editor').padeditor;
-var padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
-var padmodals = require('ep_etherpad-lite/static/js/pad_modals').padmodals;
-var padsavedrevs = require('ep_etherpad-lite/static/js/pad_savedrevs').padsavedrevs;
-var paduserlist = require('ep_etherpad-lite/static/js/pad_userlist').paduserlist;
-var padutils = require('ep_etherpad-lite/static/js/pad_utils').padutils;
+var chat = require('./chat').chat;
+var getCollabClient = require('./collab_client').getCollabClient;
+var padconnectionstatus = require('./pad_connectionstatus').padconnectionstatus;
+var padcookie = require('./pad_cookie').padcookie;
+var paddocbar = require('./pad_docbar').paddocbar;
+var padeditbar = require('./pad_editbar').padeditbar;
+var padeditor = require('./pad_editor').padeditor;
+var padimpexp = require('./pad_impexp').padimpexp;
+var padmodals = require('./pad_modals').padmodals;
+var padsavedrevs = require('./pad_savedrevs');
+var paduserlist = require('./pad_userlist').paduserlist;
+var padutils = require('./pad_utils').padutils;
 
-var createCookie = require('ep_etherpad-lite/static/js/pad_utils').createCookie;
-var readCookie = require('ep_etherpad-lite/static/js/pad_utils').readCookie;
-var randomString = require('ep_etherpad-lite/static/js/pad_utils').randomString;
+var createCookie = require('./pad_utils').createCookie;
+var readCookie = require('./pad_utils').readCookie;
+var randomString = require('./pad_utils').randomString;
+
+var hooks = require('./pluginfw/hooks');
+
+function createCookie(name, value, days, path)
+{
+  if (days)
+  {
+    var date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    var expires = "; expires=" + date.toGMTString();
+  }
+  else var expires = "";
+  
+  if(!path)
+    path = "/";
+  
+  document.cookie = name + "=" + value + expires + "; path=" + path;
+}
+
+function readCookie(name)
+{
+  var nameEQ = name + "=";
+  var ca = document.cookie.split(';');
+  for (var i = 0; i < ca.length; i++)
+  {
+    var c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function randomString()
+{
+  var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var string_length = 20;
+  var randomstring = '';
+  for (var i = 0; i < string_length; i++)
+  {
+    var rnum = Math.floor(Math.random() * chars.length);
+    randomstring += chars.substring(rnum, rnum + 1);
+  }
+  return "t." + randomstring;
+}
 
 function getParams()
 {
@@ -59,7 +101,6 @@ function getParams()
   var showLineNumbers = params["showLineNumbers"];
   var useMonospaceFont = params["useMonospaceFont"];
   var IsnoColors = params["noColors"];
-  var hideQRCode = params["hideQRCode"];
   var rtl = params["rtl"];
   var alwaysShowChat = params["alwaysShowChat"];
 
@@ -104,10 +145,6 @@ function getParams()
   {
     // If the username is set as a parameter we should set a global value that we can call once we have initiated the pad.
     settings.globalUserName = decodeURIComponent(userName);
-  }
-  if(hideQRCode)
-  {
-    $('#qrcode').hide();
   }
   if(rtl)
   {
@@ -160,7 +197,7 @@ function handshake()
   //create the url
   var url = loc.protocol + "//" + loc.hostname + ":" + port + "/";
   //find out in which subfolder we are
-  var resource = loc.pathname.substr(1, loc.pathname.indexOf("/p/")) + "socket.io";
+  var resource =  exports.baseURL.substring(1)  + "socket.io";
   //connect
   socket = pad.socket = io.connect(url, {
     resource: resource,
@@ -457,7 +494,7 @@ var pad = {
       guestPolicy: pad.padOptions.guestPolicy
     }, this);
     padimpexp.init(this);
-    padsavedrevs.init(clientVars.initialRevisionList, this);
+    padsavedrevs.init(this);
 
     padeditor.init(postAceInit, pad.padOptions.view || {}, this);
 
@@ -491,6 +528,7 @@ var pad = {
       if(padcookie.getPref("showAuthorshipColors") == false){
 	pad.changeViewOption('showAuthorColors', false);
       }
+      hooks.aCallAll("postAceInit", {ace: padeditor.ace});
     }
   },
   dispose: function()
@@ -642,13 +680,6 @@ var pad = {
     {
       // someone answered a prompt, remove it
       paduserlist.removeGuestPrompt(msg.guestId);
-    }
-  },
-  editbarClick: function(cmd)
-  {
-    if (padeditbar)
-    {
-      padeditbar.toolbarClick(cmd);
     }
   },
   dmesg: function(m)
@@ -980,12 +1011,11 @@ var settings = {
 , noColors: false
 , useMonospaceFontGlobal: false
 , globalUserName: false
-, hideQRCode: false
 , rtlIsTrue: false
 };
 
 pad.settings = settings;
-
+exports.baseURL = '';
 exports.settings = settings;
 exports.createCookie = createCookie;
 exports.readCookie = readCookie;

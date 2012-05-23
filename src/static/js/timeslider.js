@@ -22,13 +22,13 @@
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('ep_etherpad-lite/static/js/jquery');
-JSON = require('ep_etherpad-lite/static/js/json2');
-require('ep_etherpad-lite/static/js/undo-xpopup');
+require('./jquery');
+JSON = require('./json2');
 
-var createCookie = require('ep_etherpad-lite/static/js/pad_utils').createCookie;
-var readCookie = require('ep_etherpad-lite/static/js/pad_utils').readCookie;
-var randomString = require('ep_etherpad-lite/static/js/pad_utils').randomString;
+var createCookie = require('./pad_utils').createCookie;
+var readCookie = require('./pad_utils').readCookie;
+var randomString = require('./pad_utils').randomString;
+var _ = require('./underscore');
 
 var socket, token, padId, export_links;
 
@@ -59,8 +59,8 @@ function init() {
     //create the url
     var url = loc.protocol + "//" + loc.hostname + ":" + port + "/";
     //find out in which subfolder we are
-    var resource = loc.pathname.substr(1,loc.pathname.indexOf("/p/")) + "socket.io";
-
+    var resource = exports.baseURL.substring(1) + 'socket.io';
+    
     //build up the socket io connection
     socket = io.connect(url, {resource: resource});
 
@@ -127,17 +127,18 @@ function handleClientVars(message)
   clientVars = message.data;
   
   //load all script that doesn't work without the clientVars
-  BroadcastSlider = require('ep_etherpad-lite/static/js/broadcast_slider').loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
-  require('ep_etherpad-lite/static/js/broadcast_revisions').loadBroadcastRevisionsJS();
-  changesetLoader = require('ep_etherpad-lite/static/js/broadcast').loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
+  BroadcastSlider = require('./broadcast_slider').loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
+  require('./broadcast_revisions').loadBroadcastRevisionsJS();
+  changesetLoader = require('./broadcast').loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
 
   //initialize export ui
-  require('ep_etherpad-lite/static/js/pad_impexp').padimpexp.init();
+  require('./pad_impexp').padimpexp.init();
 
   //change export urls when the slider moves
   var export_rev_regex = /(\/\d+)?\/export/
   BroadcastSlider.onSlider(function(revno)
   {
+    // export_links is a jQuery Array, so .each is allowed.
     export_links.each(function()
     {
       this.setAttribute('href', this.href.replace(export_rev_regex, '/' + revno + '/export'));
@@ -151,4 +152,5 @@ function handleClientVars(message)
   }
 }
 
+exports.baseURL = '';
 exports.init = init;

@@ -26,13 +26,13 @@
 // requires: plugins
 // requires: undefined
 
-var Security = require('ep_etherpad-lite/static/js/security');
-var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
-var Ace2Common = require('ep_etherpad-lite/static/js/ace2_common');
-var map = Ace2Common.map;
+var Security = require('./security');
+var hooks = require('./pluginfw/hooks');
+var _ = require('./underscore');
+var lineAttributeMarker = require('./linestylefilter').lineAttributeMarker;
+var Ace2Common = require('./ace2_common');
 var noop = Ace2Common.noop;
-var identity = Ace2Common.identity;
-var plugins = require('ep_etherpad-lite/static/js/pluginfw/plugins');
+
 
 var domline = {};
 
@@ -104,7 +104,8 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
   }
 
   var html = [];
-  var preHtml, postHtml;
+  var preHtml = '', 
+  postHtml = '';
   var curHTML = null;
 
   function processSpaces(s)
@@ -112,12 +113,14 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
     return domline.processSpaces(s, doesWrap);
   }
 
-  var perTextNodeProcess = (doesWrap ? identity : processSpaces);
-  var perHtmlLineProcess = (doesWrap ? processSpaces : identity);
+  var perTextNodeProcess = (doesWrap ? _.identity : processSpaces);
+  var perHtmlLineProcess = (doesWrap ? processSpaces : _.identity);
   var lineClass = 'ace-line';
   result.appendSpan = function(txt, cls)
   {
-    if (cls.indexOf('list') >= 0)
+    var processedMarker = false;
+    // Handle lineAttributeMarker, if present
+    if (cls.indexOf(lineAttributeMarker) >= 0)
     {
       var listType = /(?:^| )list:(\S+)/.exec(cls);
       var start = /(?:^| )start:(\S+)/.exec(cls);
@@ -137,10 +140,26 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
             preHtml = '<ol '+start+' class="list-' + Security.escapeHTMLAttribute(listType) + '"><li>';
             postHtml = '</li></ol>';
           }
-        }
+        } 
+        processedMarker = true;
+      }
+      
+      _.map(hooks.callAll("aceDomLineProcessLineAttributes", {
+        domline: domline,
+        cls: cls
+      }), function(modifier)
+      {
+        preHtml += modifier.preHtml;
+        postHtml += modifier.postHtml;
+        processedMarker |= modifier.processedMarker;
+      });
+      
+      if( processedMarker ){
         result.lineMarker += txt.length;
         return; // don't append any text
-      }
+      } 
+
+
     }
     var href = null;
     var simpleTags = null;
@@ -165,7 +184,7 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
     var extraOpenTags = "";
     var extraCloseTags = "";
 
-    map(hooks.callAll("aceCreateDomLine", {
+    _.map(hooks.callAll("aceCreateDomLine", {
       domline: domline,
       cls: cls
     }), function(modifier)
@@ -225,13 +244,17 @@ domline.createDomLine = function(nonEmpty, doesWrap, optBrowser, optDocument)
     {
       newHTML = (preHtml || '') + newHTML + (postHtml || '');
     }
-    html = preHtml = postHtml = null; // free memory
+    html = preHtml = postHtml = ''; // free memory
     if (newHTML !== curHTML)
     {
       curHTML = newHTML;
       result.node.innerHTML = curHTML;
     }
     if (lineClass !== null) result.node.className = lineClass;
+	
+	hooks.callAll("acePostWriteDomLineHTML", {
+        node: result.node
+	});
   }
   result.prepareForAdd = writeHTML;
   result.finishUpdate = writeHTML;

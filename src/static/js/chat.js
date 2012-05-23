@@ -20,8 +20,8 @@
  * limitations under the License.
  */
 
-var padutils = require('ep_etherpad-lite/static/js/pad_utils').padutils;
-var padcookie = require('ep_etherpad-lite/static/js/pad_cookie').padcookie;
+var padutils = require('./pad_utils').padutils;
+var padcookie = require('./pad_cookie').padcookie;
 
 var chat = (function()
 {
@@ -147,10 +147,11 @@ var chat = (function()
         }
       });
       
-      for(var i in clientVars.chatHistory)
-      {
-        this.addMessage(clientVars.chatHistory[i], false);
-      }
+      var that = this;
+      $.each(clientVars.chatHistory, function(i, o){
+        that.addMessage(o, false);
+      })
+
       $("#chatcounter").text(clientVars.chatHistory.length);
     }
   }

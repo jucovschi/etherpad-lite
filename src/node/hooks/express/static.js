@@ -6,48 +6,12 @@ var settings = require("../../utils/Settings");
 var Yajsml = require('yajsml');
 var fs = require("fs");
 var ERR = require("async-stacktrace");
+var _ = require("underscore");
 
 exports.expressCreateServer = function (hook_name, args, cb) {
-  args.app.get(/^\/plugins\/([^\/]+)\/static\/(.*)/, function(req, res, next) {
-    var plugin_name = req.params[0];
-    var path = req.params[1];
-    var modulePath = req.url.split("?")[0].substr("plugins/".length);
-    if (plugins.plugins[plugin_name] == undefined) {
-      return next();
-    }
-    var fullPath = plugins.plugins[plugin_name].package.realPath+"/static/"+path;
-    fs.readFile(fullPath, "utf8", function(err, data){
-      if(ERR(err)) return;
-      res.header("Content-Type","text/css");
-      res.write(data);
-      res.end();
-    });
-  });
-  
-  /* Handle static files for plugins:
-     paths like "/static/plugins/ep_myplugin/js/test.js"
-     are rewritten into ROOT_PATH_OF_MYPLUGIN/static/js/test.js,
-     commonly ETHERPAD_ROOT/node_modules/ep_myplugin/static/js/test.js
-  */
-  args.app.get(/^\/minified\/plugins\/([^\/]+)\/static\/(.*)/, function(req, res, next) {
-    var plugin_name = req.params[0];
-    var modulePath = req.url.split("?")[0].substr("/minified/plugins/".length);
-    var fullPath = require.resolve(modulePath);
-
-    if (plugins.plugins[plugin_name] == undefined) {
-      return next();
-    }
-
-    fs.readFile(fullPath, "utf8", function(err, data){
-      if(ERR(err)) return;
-      
-      res.send("require.define('" + modulePath + "', function (require, exports, module) {" + data + "})");
-    })
-  });
-
   // Cache both minified and static.
   var assetCache = new CachingMiddleware;
-  args.app.all('/(minified|static)/*', assetCache.handle);
+  args.app.all('/(javascripts|static)/*', assetCache.handle);
 
   // Minify will serve static files compressed (minify enabled). It also has
   // file-specific hacks for ace/require-kernel/etc.
@@ -56,8 +20,10 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   // Setup middleware that will package JavaScript files served by minify for
   // CommonJS loader on the client-side.
   var jsServer = new (Yajsml.Server)({
-    rootPath: 'minified/'
+    rootPath: 'javascripts/src/'
   , rootURI: 'http://localhost:' + settings.port + '/static/js/'
+  , libraryPath: 'javascripts/lib/'
+  , libraryURI: 'http://localhost:' + settings.port + '/static/plugins/'
   });
 
   var StaticAssociator = Yajsml.associators.StaticAssociator;
@@ -70,8 +36,22 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   // serve plugin definitions
   // not very static, but served here so that client can do require("pluginfw/static/js/plugin-definitions.js");
   args.app.get('/pluginfw/plugin-definitions.json', function (req, res, next) {
-    res.header("Content-Type","application/json; charset: utf-8");
-    res.write(JSON.stringify({"plugins": plugins.plugins, "parts": plugins.parts}));
+
+    var clientParts = _(plugins.parts)
+      .filter(function(part){ return _(part).has('client_hooks') });
+      
+    var clientPlugins = {};
+    
+    _(clientParts).chain()
+      .map(function(part){ return part.plugin })
+      .uniq()
+      .each(function(name){
+        clientPlugins[name] = _(plugins.plugins[name]).clone();
+        delete clientPlugins[name]['package'];
+      });
+      
+    res.header("Content-Type","application/json; charset=utf-8");
+    res.write(JSON.stringify({"plugins": clientPlugins, "parts": clientParts}));
     res.end();
   });
 }
