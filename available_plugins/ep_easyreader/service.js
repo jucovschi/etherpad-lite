@@ -1,6 +1,6 @@
 var CommonCode = require("../../node/utils/common_code");
 var Changeset = CommonCode.require("/Changeset");
-var AttribFactory = CommonCode.require("/AttributePoolFactory.js");
+var AttribFactory = CommonCode.require("/AttributePool.js");
 
 exports.service = function() {
 

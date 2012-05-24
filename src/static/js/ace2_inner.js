@@ -54,7 +54,7 @@ function Ace2Inner(){
   var makeVirtualLineView = require('./virtual_lines').makeVirtualLineView;
   var AttributeManager = require('./AttributeManager');
   
-  var DEBUG = false; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
+  var DEBUG = true; //$$ build script replaces the string "var DEBUG=true;//$$" with "var DEBUG=false;"
   // changed to false 
   var isSetUp = false;
 
@@ -4566,7 +4566,7 @@ function Ace2Inner(){
     $(root).on("blur", handleBlur);
 
     var body = doc.getElementById("innerdocbody");
-    bindEventHandler(body, "contextmenu", handleContextMenu);
+    $(body).on("contextmenu", handleContextMenu);
 
     if (browser.msie)
     {

@@ -1,6 +1,6 @@
 var padMessageHandler = require("../../node/handler/PadMessageHandler");
 var Changeset = require("../../static/js/Changeset.js");
-var AttribFactory = require("../../static/js/AttributePoolFactory");
+var AttribFactory = require("../../static/js/AttributePool");
 
 exports.onNewChanges = function(hook_name, args, cb) {
     _pad = args["pad"];

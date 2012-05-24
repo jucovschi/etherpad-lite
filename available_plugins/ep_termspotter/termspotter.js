@@ -2,7 +2,7 @@ var autolinker = require("./autolinker.js");
 var autolinker = autolinker.autolinker();
 var padMessageHandler = require("ep_etherpad-lite/node/handler/PadMessageHandler");
 var Changeset = require("ep_etherpad-lite/static/js/Changeset.js");
-var AttribFactory = require("ep_etherpad-lite/static/js/AttributePoolFactory");
+var AttribFactory = require("ep_etherpad-lite/static/js/AttributePool");
 var PadManager = require("ep_etherpad-lite/node/db/PadManager.js");
 
 exports.onNewChanges = function(hook_name, args, cb) {

@@ -1,6 +1,6 @@
 var CodeMirror = require("./codemirror.js").CodeMirror;
 var Changeset = require("ep_etherpad-lite/static/js/Changeset.js");
-var AttribFactory = require("ep_etherpad-lite/static/js/AttributePoolFactory.js");
+var AttribFactory = require("ep_etherpad-lite/static/js/AttributePool.js");
 
 exports.highlighter = function(lang) {
     var langjs = require("./mode/"+lang+"/"+lang+".js");

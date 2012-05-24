@@ -44,7 +44,7 @@ exports.expressCreateServer = function(hook_name, args, cb) {
 	
 	if (plugins.hooks["onUIEvent"] === undefined) return cb([]);
 	plugins.hooks["onUIEvent"].map(function (hook) {
-	    if (hook.hook_fn_name.indexOf("ep_"+plugin_name)===0) {
+	    if (hook.part.name==plugin_name) {
 		result = hookCallWrapper(hook, hook_name, {"state": getInteractionData(token), "args":args});
 		if (typeof(result)==="string")
 		    res.write(result);

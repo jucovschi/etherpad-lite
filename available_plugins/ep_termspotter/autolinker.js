@@ -1,5 +1,5 @@
 var Changeset = require("ep_etherpad-lite/static/js/Changeset.js");
-var AttribFactory = require("ep_etherpad-lite/static/js/AttributePoolFactory");
+var AttribFactory = require("ep_etherpad-lite/static/js/AttributePool");
 var linksrv = require("./linkersrv.js").linkersrv;
 var fs = require("fs");
 var path = require("path");
